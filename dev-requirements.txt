@@ -1,0 +1,17 @@
+# dev-requirements.txt
+-r requirements.txt
+
+# Testing
+pytest
+pytest-mock
+
+# Linting & Formatting
+flake8
+black
+
+# Type Checking
+mypy
+types-requests
+
+# Optional: Test coverage
+pytest-cov

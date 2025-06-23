@@ -1,0 +1,40 @@
+# macOS system files
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pkl
+
+# Environment variables
+.env
+
+# Pytest and test cache
+.pytest_cache/
+.coverage
+
+# Coverage reports
+htmlcov/
+
+# Virtual environments (optional, if used locally)
+.venv/
+env/
+venv/
+
+# Bolt.new or frontend build (if added later)
+dist/
+build/
+
+# Logs
+*.log
+
+# SQLite or temp databases (if used for local dev)
+*.sqlite3
+*.db
+
+# VSCode and JetBrains settings (optional)
+.vscode/
+.idea/
