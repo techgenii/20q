@@ -29,9 +29,14 @@ data_path = os.path.join(BASE_DIR, "data", "secret_words.json")
 # Load OpenAI API key from env
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Load secret words from JSON file
-with open(data_path, "r") as f:
-    SECRET_WORDS = json.load(f)
+# Load secret words from supabase
+def load_secret_words():
+    response = supabase.table("secret_words").select("*").execute()
+    if response.error:
+        raise Exception(f"Supabase error: {response.error.message}")
+    return response.data
+
+SECRET_WORDS = load_secret_words()
 
 
 def choose_secret_word(difficulty=None):
