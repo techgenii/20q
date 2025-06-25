@@ -1,3 +1,4 @@
+
 # This file is part of 20Q.
 #
 # Copyright (C) 2025 Trailyn Ventures, LLC
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 from supabase import create_client, Client
 import os
 from dotenv import load_dotenv
@@ -21,6 +23,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+# Service role client for server-side operations (game logic, database operations)
+# This has full access and bypasses RLS
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+# Anonymous client for authentication operations
+# This respects RLS and is used for user auth
+supabase_auth: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
