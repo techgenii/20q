@@ -39,6 +39,8 @@ CREATE TABLE public.games (
   created_at timestamp without time zone DEFAULT now(),
   completed_at timestamp without time zone,
   difficulty integer,
+  enable_tts boolean DEFAULT false,
+  voice_id text,
   CONSTRAINT games_pkey PRIMARY KEY (id),
   CONSTRAINT games_host_player_id_fkey FOREIGN KEY (host_player_id) REFERENCES public.players(id),
   CONSTRAINT games_current_player_id_fkey FOREIGN KEY (current_player_id) REFERENCES public.players(id),
@@ -94,12 +96,12 @@ CREATE TABLE public.player_stats_difficulty (
   CONSTRAINT player_stats_difficulty_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.players(id)
 );
 
--- Create table: word_bank
-CREATE TABLE public.word_bank (
+-- Create table: secret_words
+CREATE TABLE public.secret_words (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   name text NOT NULL,
   category text,
   difficulty integer,
   is_active boolean DEFAULT true,
-  CONSTRAINT word_bank_pkey PRIMARY KEY (id)
+  CONSTRAINT secret_words_pkey PRIMARY KEY (id)
 );
