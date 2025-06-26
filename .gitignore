@@ -83,3 +83,10 @@ Desktop.ini
 
 #Zip files
 *.zip
+
+# Serverless Framework
+.serverless/
+.aws-sam/
+
+# Node.js for backend
+backend/node_modules/
