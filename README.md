@@ -6,12 +6,13 @@
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![TypeScript](https://img.shields.io/badge/typescript-4.0+-blue.svg)](https://www.typescriptlang.org/)
 
-A modern, multiplayer implementation of the classic guessing game, now called **Whisper Chase: 20 Questions**, where players think of an object and others try to guess it using yes/no questions.
+Whisper Chase: 20 Questions is a multiplayer guessing game where you and others team up—or compete—against an AI to uncover a secret word in 20 questions or less. With each round, the challenge grows, making every guess count as the mystery word gets trickier to crack.
 
 ## 🎮 Features
 
 - **Multiplayer Support**: Play Whisper Chase with friends in real-time
 - **Intelligent AI**: AI-powered question suggestions and object recognition
+- **Voice Features**: Text-to-speech and speech-to-text powered by ElevenLabs
 - **Web Interface**: Clean, responsive web UI built with modern technologies
 - **Real-time Communication**: Live game updates and chat functionality
 - **Question History**: Track questions and answers throughout the game
@@ -21,10 +22,11 @@ A modern, multiplayer implementation of the classic guessing game, now called **
 
 ### Prerequisites
 
-- Python 3.8 or higher
-- Node.js 16 or higher
+- Python 3.13 or higher
+- Node.js 20 or higher
 - npm or yarn
 - Supabase account and project
+- ElevenLabs Account
 
 ### Installation
 
@@ -86,6 +88,7 @@ A modern, multiplayer implementation of the classic guessing game, now called **
 - **Frontend**: TypeScript/JavaScript with modern web frameworks
 - **Database**: Supabase (PostgreSQL) for real-time data and authentication
 - **Real-time**: Supabase real-time subscriptions for live gameplay
+- **Voice Features**: ElevenLabs API for text-to-speech and speech-to-text
 - **Testing**: pytest for backend testing
 - **Development**: VS Code configuration included
 
@@ -109,8 +112,9 @@ WhisperChase/
 ## 🎲 Game Rules
 
 - Players have up to 20 yes/no questions to guess the object
+- Questions and guesses can be made via chat or voice—both are supported throughout the game
 - Questions should be answerable with "Yes", "No", or "Sometimes/Maybe"
-- The thinking player should answer honestly
+- The AI is the thinking player and should answer honestly
 - Guessing the object correctly within 20 questions wins the round
 - Points are awarded based on efficiency and creativity
 

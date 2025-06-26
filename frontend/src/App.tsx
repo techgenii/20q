@@ -707,7 +707,7 @@ const LoginScreen = () => {
               Start New Game
             </button>
             <div className="text-center text-gray-500">
-              <p>Think of a word and let others guess!</p>
+              <p>Whisper Chase: 20 Questions is a multiplayer guessing game where you and others team up—or compete—against an AI to uncover a secret word in 20 questions or less. With each round, the challenge grows, making every guess count as the mystery word gets trickier to crack.</p>
             </div>
           </div>
         </div>
