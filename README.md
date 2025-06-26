@@ -1,15 +1,16 @@
-# 20Q - Multi Player Game
+# Whisper Chase: 20 Questions - Multi Player Game
 
 [![Built with Bolt](https://img.shields.io/badge/Built%20with-Bolt-blue?style=flat-square)](https://bolt.new)
+[![Netlify Status](https://api.netlify.com/api/v1/badges/5c35e962-3483-496c-b3ae-1e6cc7019008/deploy-status)](https://app.netlify.com/projects/startling-beijinho-0245f3/deploys)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![TypeScript](https://img.shields.io/badge/typescript-4.0+-blue.svg)](https://www.typescriptlang.org/)
 
-A modern, multiplayer implementation of the classic "20 Questions" game where players think of an object and others try to guess it using yes/no questions.
+A modern, multiplayer implementation of the classic guessing game, now called **Whisper Chase: 20 Questions**, where players think of an object and others try to guess it using yes/no questions.
 
 ## 🎮 Features
 
-- **Multiplayer Support**: Play with friends in real-time
+- **Multiplayer Support**: Play Whisper Chase with friends in real-time
 - **Intelligent AI**: AI-powered question suggestions and object recognition
 - **Web Interface**: Clean, responsive web UI built with modern technologies
 - **Real-time Communication**: Live game updates and chat functionality
@@ -66,14 +67,14 @@ A modern, multiplayer implementation of the classic "20 Questions" game where pl
    npm run dev
    ```
 
-5. **Open your browser**
+7. **Open your browser**
    ```
    Navigate to http://localhost:3000
    ```
 
 ## 🎯 How to Play
 
-1. **Create or Join a Game**: Start a new game or join an existing room
+1. **Create or Join a Game**: Start a new game or join an existing room in Whisper Chase
 2. **Think of an Object**: One player thinks of any object, person, or concept
 3. **Ask Questions**: Other players take turns asking yes/no questions
 4. **Make Guesses**: Try to guess the object within 20 questions
@@ -91,7 +92,7 @@ A modern, multiplayer implementation of the classic "20 Questions" game where pl
 ## 📁 Project Structure
 
 ```
-20q/
+WhisperChase/
 ├── backend/          # Python backend server
 │   ├── data/         # Game data and assets
 │   ├── tests/        # Backend test files
@@ -128,12 +129,6 @@ View test coverage:
 pytest --cov=. --cov-report=html
 # Open htmlcov/index.html in your browser
 ```
-
-- Players have up to 20 yes/no questions to guess the object
-- Questions should be answerable with "Yes", "No", or "Sometimes/Maybe"
-- The thinking player should answer honestly
-- Guessing the object correctly within 20 questions wins the round
-- Points are awarded based on efficiency and creativity
 
 ## 🤝 Contributing
 

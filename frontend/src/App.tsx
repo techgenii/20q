@@ -317,7 +317,7 @@ const LoginScreen = () => {
           <div className="bg-gradient-to-r from-yellow-400 to-orange-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <Target className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">20 Questions</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Whisper Chase: 20 Questions</h1>
           <p className="text-white/70">Think. Guess. Win.</p>
         </div>
 
@@ -496,7 +496,7 @@ const LoginScreen = () => {
             </div>
             <div>
               <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                20 Questions
+                Whisper Chase: 20 Questions
               </span>
               {voiceEnabled && (
                 <div className="flex items-center space-x-1 bg-green-100 px-2 py-0.5 rounded-full ml-2 inline-flex">
@@ -769,7 +769,7 @@ const LoginScreen = () => {
                   <MessageCircle className="w-6 h-6" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold">20 Questions Game</h1>
+                  <h1 className="text-2xl font-bold">Whisper Chase: 20 Questions</h1>
                   <p className="text-white/80">vs QuestionMaster</p>
                 </div>
                 {voiceEnabled && (

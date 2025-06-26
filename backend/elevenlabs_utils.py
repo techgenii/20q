@@ -176,8 +176,8 @@ def get_user_subscription_info():
 
 # Game-specific TTS messages
 GAME_MESSAGES = {
-    "welcome": "Welcome to 20 Questions! I'm thinking of something. You have 20 questions to guess what it is. Good luck!",
-    "welcome_with_difficulty": "Welcome to 20 Questions! I'm thinking of something with difficulty level {difficulty}. You have 20 questions to guess what it is. Good luck!",
+    "welcome": "Welcome to Whisper Chase: 20 Questions! I'm thinking of something. You have 20 questions to guess what it is. Good luck!",
+    "welcome_with_difficulty": "Welcome to Whisper Chase: 20 Questions! I'm thinking of something with difficulty level {difficulty}. You have 20 questions to guess what it is. Good luck!",
     "correct_guess": "Congratulations! You guessed correctly! The answer was {word}.",
     "incorrect_guess": "Sorry, that's not correct. Keep trying!",
     "game_over_lose": "Game over! You've used all 20 questions. The answer was {word}. Better luck next time!",

@@ -15,24 +15,30 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from fastapi import FastAPI, HTTPException, Depends, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, EmailStr
-from supabase import create_client, Client
+import io
 import os
 from typing import Optional
+
 import requests
-import io
-from fastapi import File, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
-from .game_logic import start_game, join_game, ask_openai_question, record_question, increment_questions_asked, make_guess, get_game
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from mangum import Mangum
+from pydantic import BaseModel, EmailStr
+
+from .game_logic import (
+    ask_openai_question,
+    get_game,
+    increment_questions_asked,
+    join_game,
+    make_guess,
+    record_question,
+    start_game,
+)
+from .supabase_client import supabase, supabase_auth
 
 # Initialize FastAPI app
-app = FastAPI(title="20Q Game with Authentication")
-
-# Import Supabase clients
-from .supabase_client import supabase, supabase_auth
+app = FastAPI(title="Whisper Chase: 20 Questions")
 
 # Security
 security = HTTPBearer()

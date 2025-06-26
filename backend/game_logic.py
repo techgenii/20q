@@ -15,13 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import json
-import random
 import os
-import requests
-import base64
+import random
 from io import BytesIO
-from .supabase_client import supabase
+import base64
+
+import requests
 import openai
+
+from .supabase_client import supabase
 
 # Optional: use dotenv only locally
 try:
