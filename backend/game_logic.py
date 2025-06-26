@@ -20,21 +20,22 @@ import os
 import requests
 import base64
 from io import BytesIO
-from dotenv import load_dotenv
 from .supabase_client import supabase
 import openai
 
-load_dotenv()
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-data_path = os.path.join(BASE_DIR, "data", "secret_words.json")
+# Optional: use dotenv only locally
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # Load API keys from env
 openai.api_key = os.getenv("OPENAI_API_KEY")
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")  # Default voice ID
 
 # ElevenLabs API configuration
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")  # Default voice ID
 ELEVENLABS_BASE_URL = os.getenv("ELEVENLABS_BASE_URL")
 
 # Load secret words from supabase

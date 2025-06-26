@@ -8,3 +8,4 @@ openai
 aiohttp
 email-validator
 python-multipart
+mangum

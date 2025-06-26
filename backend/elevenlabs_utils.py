@@ -2,9 +2,13 @@
 import os
 import requests
 import base64
-from dotenv import load_dotenv
 
-load_dotenv()
+# Optional: use dotenv only locally
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # ElevenLabs configuration
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")

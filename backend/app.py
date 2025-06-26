@@ -26,6 +26,7 @@ import io
 from fastapi import File, UploadFile
 from fastapi.responses import StreamingResponse
 from .game_logic import start_game, join_game, ask_openai_question, record_question, increment_questions_asked, make_guess, get_game
+from mangum import Mangum
 
 # Initialize FastAPI app
 app = FastAPI(title="20Q Game with Authentication")
@@ -587,7 +588,4 @@ async def update_game_voice_settings(
 @app.get("/")
 async def root():
     return {"message": "20Q Game API with Authentication is running"}
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+handler = Mangum(app)
