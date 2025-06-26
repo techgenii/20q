@@ -1,9 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Gamepad2, Trophy, History, MessageCircle, Users, Crown, Target, Clock, Zap, Mic, MicOff, Volume2, VolumeX, Play, Pause, RotateCcw, Send, Settings } from 'lucide-react';
+import { BoltNewBadge } from '@/components/ui/bolt-new-badge';
+
+type UserType = {
+  id: string;
+  username: string;
+  email: string;
+  totalGames: number;
+  gamesWon: number;
+  winRate: number;
+  bestStreak: number;
+  currentStreak: number;
+  avatar: string | null;
+  joinDate: string;
+  favoriteCategory: string;
+  achievements: string[];
+};
 
 const TwentyQuestionsGame = () => {
   const [currentScreen, setCurrentScreen] = useState('login');
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<UserType | null>(null);
   const [gameState, setGameState] = useState(null);
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -15,15 +31,15 @@ const TwentyQuestionsGame = () => {
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [transcription, setTranscription] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [audioBlob, setAudioBlob] = useState(null);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
 
-  const mediaRecorderRef = useRef(null);
-  const audioRef = useRef(null);
-  const recordingTimerRef = useRef(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const recordingTimerRef = useRef<number | null>(null);
 
   // Mock data
-  const mockUser = {
+  const mockUser: UserType = {
     id: '1',
     username: 'Player123',
     email: 'player@example.com',
@@ -65,8 +81,8 @@ const TwentyQuestionsGame = () => {
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       
-      const chunks = [];
-      mediaRecorder.ondataavailable = (event) => {
+      const chunks: BlobPart[] = [];
+      mediaRecorder.ondataavailable = (event: BlobEvent) => {
         chunks.push(event.data);
       };
 
@@ -93,11 +109,13 @@ const TwentyQuestionsGame = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      clearInterval(recordingTimerRef.current);
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
     }
   };
 
-  const transcribeAudio = async (audioBlob) => {
+  const transcribeAudio = async (audioBlob: Blob) => {
     setIsTranscribing(true);
     // Mock transcription - replace with actual ElevenLabs API call
     setTimeout(() => {
@@ -121,7 +139,7 @@ const TwentyQuestionsGame = () => {
   };
 
   const playAudio = () => {
-    if (audioBlob && !isPlaying) {
+    if (audioBlob && !isPlaying && audioRef.current) {
       const url = URL.createObjectURL(audioBlob);
       audioRef.current.src = url;
       audioRef.current.play();
@@ -136,7 +154,7 @@ const TwentyQuestionsGame = () => {
     }
   };
 
-  const formatTime = (seconds) => {
+  const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -206,7 +224,7 @@ const LoginScreen = () => {
     }
   }, []);
 
-  const validateResetToken = async (token) => {
+  const validateResetToken = async (token: string) => {
     try {
       // Replace with your actual API call
       const response = await fetch(`/api/validate-reset-token?token=${token}`);
@@ -223,13 +241,13 @@ const LoginScreen = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setUser(mockUser);
     setCurrentScreen('lobby');
   };
 
-  const handleForgotPassword = async (e) => {
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       // Replace with your actual API call
@@ -254,7 +272,7 @@ const LoginScreen = () => {
     }
   };
 
-  const handleResetPassword = async (e) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate passwords match
@@ -317,7 +335,11 @@ const LoginScreen = () => {
           <div className="bg-gradient-to-r from-yellow-400 to-orange-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <Target className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Whisper Chase: 20 Questions</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">
+            Whisper Chase
+            <br />
+            20 Questions
+          </h1>
           <p className="text-white/70">Think. Guess. Win.</p>
         </div>
 
@@ -334,19 +356,19 @@ const LoginScreen = () => {
                 type="password"
                 placeholder="New Password"
                 required
-                minLength="8"
+                minLength={8}
                 className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                 value={formData.newPassword}
-                onChange={(e) => setFormData({...formData, newPassword: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
               />
               <input
                 type="password"
                 placeholder="Confirm New Password"
                 required
-                minLength="8"
+                minLength={8}
                 className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                 value={formData.confirmPassword}
-                onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
               />
               <button
                 type="submit"
@@ -468,6 +490,13 @@ const LoginScreen = () => {
           </div>
         )}
       </div>
+      
+      {/* BoltNewBadge positioned on the login screen */}
+      <BoltNewBadge 
+        position="bottom-right" 
+        variant="auto" 
+        size="small"
+      />
     </div>
   );
 };
@@ -496,7 +525,7 @@ const LoginScreen = () => {
             </div>
             <div>
               <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                Whisper Chase: 20 Questions
+                Whisper Chase
               </span>
               {voiceEnabled && (
                 <div className="flex items-center space-x-1 bg-green-100 px-2 py-0.5 rounded-full ml-2 inline-flex">
@@ -581,7 +610,7 @@ const LoginScreen = () => {
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-2xl font-bold text-gray-800">Performance Stats</h2>
                 <div className="text-sm text-gray-500">
-                  Member since {new Date(user?.joinDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  Member since {new Date(user?.joinDate || '').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </div>
               </div>
               
@@ -740,11 +769,11 @@ const LoginScreen = () => {
       }
     };
 
-    const handleInputChange = (e) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setGameInputMessage(e.target.value);
     };
 
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         handleSendMessage();
@@ -769,7 +798,7 @@ const LoginScreen = () => {
                   <MessageCircle className="w-6 h-6" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold">Whisper Chase: 20 Questions</h1>
+                  <h1 className="text-2xl font-bold">Whisper Chase <br/> 20 Questions</h1>
                   <p className="text-white/80">vs QuestionMaster</p>
                 </div>
                 {voiceEnabled && (
