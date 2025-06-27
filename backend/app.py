@@ -34,6 +34,7 @@ from .game_logic import (
     make_guess,
     record_question,
     start_game,
+    get_remaining_slots,
 )
 from .supabase_client import supabase, supabase_auth
 
@@ -58,6 +59,11 @@ class UserResponse(BaseModel):
     email: str
     full_name: Optional[str] = None
     created_at: str
+    avatar_url: Optional[str] = None
+    last_login_at: Optional[str] = None
+    bio: Optional[str] = None
+    favorite_category: Optional[str] = None
+    achievements: Optional[list] = []
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -84,6 +90,9 @@ class VoiceResponse(BaseModel):
 # Game Models (existing)
 class StartGameRequest(BaseModel):
     difficulty: int = None
+    game_type: Optional[str] = None
+    max_players: Optional[int] = None
+    guessed_word: Optional[str] = None
 
 class JoinGameRequest(BaseModel):
     game_id: str
@@ -158,20 +167,31 @@ async def sign_up(user_data: UserSignUp):
                 detail="User registration failed"
             )
         
-        # Create user response
-        user_response = UserResponse(
-            id=response.user.id,
-            email=response.user.email,
-            full_name=response.user.user_metadata.get("full_name"),
-            created_at=response.user.created_at.isoformat()
-        )
-
         # Insert user into players table for FK constraint
         supabase.table("players").insert({
             "id": response.user.id,
             "email": response.user.email,
-            "username": response.user.user_metadata.get("full_name")
+            "username": response.user.user_metadata.get("full_name"),
+            "avatar_url": None,
+            "last_login_at": None,
+            "bio": None,
+            "favorite_category": None,
+            "achievements": [],
         }).execute()
+        
+        # Fetch the player record to get all fields
+        player = supabase.table("players").select("avatar_url, last_login_at, bio, favorite_category, achievements").eq("id", response.user.id).single().execute().data or {}
+        user_response = UserResponse(
+            id=response.user.id,
+            email=response.user.email,
+            full_name=response.user.user_metadata.get("full_name"),
+            created_at=response.user.created_at.isoformat(),
+            avatar_url=player.get("avatar_url"),
+            last_login_at=player.get("last_login_at"),
+            bio=player.get("bio"),
+            favorite_category=player.get("favorite_category"),
+            achievements=player.get("achievements", []),
+        )
         
         return TokenResponse(
             access_token=response.session.access_token,
@@ -204,11 +224,17 @@ async def login(user_credentials: UserLogin):
             )
         
         # Create user response
+        player = supabase.table("players").select("avatar_url, last_login_at, bio, favorite_category, achievements").eq("id", response.user.id).single().execute().data or {}
         user_response = UserResponse(
             id=response.user.id,
             email=response.user.email,
             full_name=response.user.user_metadata.get("full_name"),
-            created_at=response.user.created_at.isoformat()
+            created_at=response.user.created_at.isoformat(),
+            avatar_url=player.get("avatar_url"),
+            last_login_at=player.get("last_login_at"),
+            bio=player.get("bio"),
+            favorite_category=player.get("favorite_category"),
+            achievements=player.get("achievements", []),
         )
         
         return TokenResponse(
@@ -271,11 +297,20 @@ def api_start_game(req: StartGameRequest, current_user = Depends(get_current_use
     """
     try:
         # Use the authenticated user's ID as the host player ID
-        game = start_game(current_user.id, req.difficulty)
+        game = start_game(
+            current_user.id,
+            req.difficulty,
+            game_type=req.game_type,
+            max_players=req.max_players,
+            guessed_word=req.guessed_word
+        )
         return {
-            "game_id": game["id"], 
+            "game_id": game["id"],
             "secret_word": "hidden_for_players",
-            "host_player_id": current_user.id
+            "host_player_id": current_user.id,
+            "game_type": game.get("game_type"),
+            "max_players": game.get("max_players"),
+            "guessed_word": game.get("guessed_word")
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -288,7 +323,11 @@ def api_join_game(req: JoinGameRequest, current_user = Depends(get_current_user)
     try:
         # Use the authenticated user's ID as the player ID
         participant = join_game(req.game_id, current_user.id)
-        return participant
+        remaining_slots = get_remaining_slots(req.game_id)
+        return {
+            **participant,
+            "remaining_slots": remaining_slots
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

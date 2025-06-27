@@ -52,11 +52,25 @@ def test_start_game_failure():
         assert "fail" in resp.json().get("detail", "")
 
 def test_join_game_success():
-    with patch("backend.app.join_game") as mock_join_game:
+    with patch("backend.app.join_game") as mock_join_game, \
+         patch("backend.app.get_remaining_slots") as mock_get_remaining_slots:
         mock_join_game.return_value = {"game_id": "game-uuid", "player_id": "player-uuid"}
+        mock_get_remaining_slots.return_value = 2
         resp = client.post("/join_game", json={"game_id": "game-uuid", "player_id": "player-uuid"})
         assert resp.status_code == 200
-        assert resp.json()["game_id"] == "game-uuid"
+        data = resp.json()
+        assert data["game_id"] == "game-uuid"
+        assert data["remaining_slots"] == 2
+
+def test_join_game_no_max_players():
+    with patch("backend.app.join_game") as mock_join_game, \
+         patch("backend.app.get_remaining_slots") as mock_get_remaining_slots:
+        mock_join_game.return_value = {"game_id": "game-uuid", "player_id": "player-uuid"}
+        mock_get_remaining_slots.return_value = 1
+        resp = client.post("/join_game", json={"game_id": "game-uuid", "player_id": "player-uuid"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["remaining_slots"] == 1
 
 def test_join_game_failure():
     with patch("backend.app.join_game", side_effect=Exception("fail")):
@@ -133,8 +147,16 @@ def test_auth_signup_success():
         mock_signup.return_value = mock_response
         
         with patch("backend.app.supabase.table") as mock_table:
+            # Mock insert
             mock_table.return_value.insert.return_value.execute.return_value = MagicMock()
-            
+            # Mock select for player fields
+            mock_table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value.data = {
+                "avatar_url": None,
+                "last_login_at": None,
+                "bio": None,
+                "favorite_category": None,
+                "achievements": [],
+            }
             resp = client.post("/auth/signup", json={
                 "email": "test@example.com",
                 "password": "password123",
@@ -145,6 +167,11 @@ def test_auth_signup_success():
             data = resp.json()
             assert data["access_token"] == "test-token"
             assert data["user"]["email"] == "test@example.com"
+            assert data["user"]["avatar_url"] is None
+            assert data["user"]["last_login_at"] is None
+            assert data["user"]["bio"] is None
+            assert data["user"]["favorite_category"] is None
+            assert data["user"]["achievements"] == []
 
 def test_auth_signup_failure():
     with patch("backend.app.supabase_auth.auth.sign_up") as mock_signup:
@@ -173,16 +200,28 @@ def test_auth_login_success():
         mock_response.user = mock_user
         mock_response.session = mock_session
         mock_login.return_value = mock_response
-        
-        resp = client.post("/auth/login", json={
-            "email": "test@example.com",
-            "password": "password123"
-        })
-        
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["access_token"] == "test-token"
-        assert data["user"]["email"] == "test@example.com"
+        with patch("backend.app.supabase.table") as mock_table:
+            # Mock select for player fields
+            mock_table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value.data = {
+                "avatar_url": None,
+                "last_login_at": None,
+                "bio": None,
+                "favorite_category": None,
+                "achievements": [],
+            }
+            resp = client.post("/auth/login", json={
+                "email": "test@example.com",
+                "password": "password123"
+            })
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["access_token"] == "test-token"
+            assert data["user"]["email"] == "test@example.com"
+            assert data["user"]["avatar_url"] is None
+            assert data["user"]["last_login_at"] is None
+            assert data["user"]["bio"] is None
+            assert data["user"]["favorite_category"] is None
+            assert data["user"]["achievements"] == []
 
 def test_auth_login_failure():
     with patch("backend.app.supabase_auth.auth.sign_in_with_password") as mock_login:

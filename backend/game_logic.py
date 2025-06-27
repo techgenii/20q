@@ -129,8 +129,8 @@ def choose_secret_word(difficulty=None):
     return random.choice(filtered)["name"]
 
 
-def start_game(host_player_id, difficulty=None, enable_tts=False, voice_id=None):
-    """Create a new game with a secret word and store difficulty."""
+def start_game(host_player_id, difficulty=None, enable_tts=False, voice_id=None, game_type=None, max_players=None, guessed_word=None):
+    """Create a new game with a secret word, store difficulty, and support game_type, max_players, guessed_word."""
     try:
         secret_word_entry = None
         if difficulty:
@@ -154,22 +154,24 @@ def start_game(host_player_id, difficulty=None, enable_tts=False, voice_id=None)
             "enable_tts": enable_tts,
             "voice_id": voice_id or ELEVENLABS_VOICE_ID
         }
+        if game_type is not None:
+            data["game_type"] = game_type
+        if max_players is not None:
+            data["max_players"] = max_players
+        if guessed_word is not None:
+            data["guessed_word"] = guessed_word
         response = supabase.table("games").insert(data).execute()
         if not response.data:
             raise Exception("Failed to start game with the given host player ID.")
-        
         game_data = response.data[0]
-        
         # Add host player as participant in the game
         join_game(game_data["id"], host_player_id)
-        
         # Generate welcome message with TTS if enabled
         if enable_tts:
             welcome_text = f"Welcome to 20 Questions! I'm thinking of something with difficulty level {difficulty_level}. You have 20 questions to guess what it is. Good luck!"
             audio_data = generate_speech(welcome_text, voice_id)
             if audio_data:
                 game_data["welcome_audio"] = base64.b64encode(audio_data).decode('utf-8')
-        
         return game_data
     except Exception as e:
         print(f"Error in start_game: {e}")
@@ -565,3 +567,13 @@ def upsert_player_stats_difficulty(player_id, difficulty, stats):
     except Exception as e:
         print(f"Error in upsert_player_stats_difficulty: {e}")
         raise
+
+
+def get_remaining_slots(game_id):
+    game = get_game(game_id)
+    max_players = game.get("max_players")
+    if max_players is None:
+        max_players = 1
+    participants_resp = supabase.table("game_participants").select("player_id").eq("game_id", game_id).execute()
+    current_count = len(participants_resp.data) if participants_resp.data else 0
+    return max_players - current_count

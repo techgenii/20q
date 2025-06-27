@@ -215,5 +215,47 @@ def test_make_guess_with_tts(monkeypatch):
     result = game_logic.make_guess_with_tts("game-uuid", "player-uuid", "guess")
     assert result["correct"] is True
 
+def test_get_remaining_slots_with_max_players(monkeypatch):
+    # Patch get_game to return max_players=4
+    monkeypatch.setattr(game_logic, "get_game", lambda game_id: {"max_players": 4})
+    # Patch supabase to return 2 participants
+    mock_resp = MagicMock()
+    mock_resp.data = [{"player_id": "p1"}, {"player_id": "p2"}]
+    game_logic.supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_resp
+    slots = game_logic.get_remaining_slots("game-uuid")
+    assert slots == 2
+
+def test_get_remaining_slots_no_max_players(monkeypatch):
+    # Patch get_game to return no max_players
+    monkeypatch.setattr(game_logic, "get_game", lambda game_id: {})
+    # Patch supabase to return 0 participants
+    mock_resp = MagicMock()
+    mock_resp.data = []
+    game_logic.supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_resp
+    slots = game_logic.get_remaining_slots("game-uuid")
+    assert slots == 1
+
+def test_start_game_with_game_type_max_players_guessed_word(monkeypatch):
+    mock_response = MagicMock()
+    mock_response.error = None
+    mock_response.data = [{
+        "id": "game-uuid",
+        "host_player_id": "host",
+        "secret_word": "test",
+        "status": "playing",
+        "questions_asked": 0,
+        "current_player_id": "host",
+        "game_type": "solo",
+        "max_players": 2,
+        "guessed_word": "cat"
+    }]
+    game_logic.supabase.table.return_value.insert.return_value.execute.return_value = mock_response
+    # Patch join_game to do nothing
+    monkeypatch.setattr(game_logic, "join_game", lambda game_id, player_id: None)
+    result = game_logic.start_game("host", 1, game_type="solo", max_players=2, guessed_word="cat")
+    assert result["game_type"] == "solo"
+    assert result["max_players"] == 2
+    assert result["guessed_word"] == "cat"
+
 
 
