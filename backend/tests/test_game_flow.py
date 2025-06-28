@@ -18,16 +18,29 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 import backend.game_logic as game_logic
+import openai
 
 @pytest.fixture(autouse=True)
 def patch_supabase_and_openai(monkeypatch):
+    # Mock SECRET_WORDS to prevent real Supabase calls during module import
+    mock_secret_words = [
+        {"name": "elephant", "difficulty": 1},
+        {"name": "car", "difficulty": 1},
+        {"name": "computer", "difficulty": 2},
+        {"name": "pizza", "difficulty": 1}
+    ]
+    monkeypatch.setattr(game_logic, "SECRET_WORDS", mock_secret_words)
+    
     # Patch supabase client methods
     mock_supabase = MagicMock()
     monkeypatch.setattr(game_logic, "get_supabase_client", lambda: mock_supabase)
-    # Patch OpenAI
-    monkeypatch.setattr(game_logic.openai.ChatCompletion, "create", MagicMock(return_value=MagicMock(
-        choices=[MagicMock(message=MagicMock(content="Yes"))]
-    )))
+    
+    # Patch OpenAI ChatCompletion.create with a mock that returns a proper response
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=MagicMock(content="Yes"))]
+    
+    # Patch the openai.ChatCompletion.create method
+    monkeypatch.setattr(openai.ChatCompletion, "create", MagicMock(return_value=mock_response))
 
 def test_choose_secret_word_returns_word():
     # Should return a word from the loaded list
@@ -55,7 +68,12 @@ def test_start_game_inserts_game(monkeypatch):
     assert result["id"] == "game-uuid"
     assert result["status"] == "playing"
 
-def test_ask_openai_question():
+def test_ask_openai_question(monkeypatch):
+    # Mock OpenAI response
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=MagicMock(content="Yes"))]
+    monkeypatch.setattr(openai.ChatCompletion, "create", MagicMock(return_value=mock_response))
+    
     answer = game_logic.ask_openai_question("elephant", "Is it big?")
     assert answer["answer"] in ["Yes", "No", "Maybe"]
 
@@ -65,13 +83,18 @@ def test_make_guess_correct(monkeypatch):
     # Patch update_game_winner to do nothing
     monkeypatch.setattr(game_logic, "update_game_winner", lambda game_id, player_id: None)
     # Patch OpenAI to return "Correct"
-    game_logic.openai.ChatCompletion.create.return_value.choices[0].message.content = "Correct"
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=MagicMock(content="Correct"))]
+    monkeypatch.setattr(openai.ChatCompletion, "create", MagicMock(return_value=mock_response))
     result = game_logic.make_guess("game-uuid", "player-uuid", "elephant")
     assert result["correct"] is True
 
 def test_make_guess_incorrect(monkeypatch):
     monkeypatch.setattr(game_logic, "get_game", lambda game_id: {"secret_word": "elephant"})
-    game_logic.openai.ChatCompletion.create.return_value.choices[0].message.content = "Incorrect"
+    # Patch OpenAI to return "Incorrect"
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=MagicMock(content="Incorrect"))]
+    monkeypatch.setattr(openai.ChatCompletion, "create", MagicMock(return_value=mock_response))
     result = game_logic.make_guess("game-uuid", "player-uuid", "car")
     assert result["correct"] is False
 

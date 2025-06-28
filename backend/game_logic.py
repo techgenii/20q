@@ -199,13 +199,15 @@ def ask_openai_question(secret_word, question, enable_tts=False, voice_id=None):
     try:
         instruction_prompt = f"""You are playing 20 Questions. The secret word is "{secret_word}"""
         prompt = f"""The player asked: "{question}" Answer with only one word: Yes, No, or Maybe."""
-        response = openai.responses.create(
+        response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
-            instructions=instruction_prompt,
-            input=prompt,
+            messages=[
+                {"role": "system", "content": instruction_prompt},
+                {"role": "user", "content": prompt}
+            ],
             temperature=0
         )
-        answer = response.output_text.strip().rstrip('.')
+        answer = response.choices[0].message.content.strip().rstrip('.')
         result = {"answer": answer}
         
         # Generate TTS if enabled
@@ -393,13 +395,15 @@ def make_guess(game_id, player_id, guess, enable_tts=False, voice_id=None):
         instruction_prompt = f"""You are playing 20 Questions. The secret word is "{secret_word}"."""
         prompt = f"""The player guessed: "{guess}"\nReply with exactly one word: Correct or Incorrect."""
         
-        response = openai.responses.create(
+        response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
-            instructions=instruction_prompt,
-            input=prompt,
+            messages=[
+                {"role": "system", "content": instruction_prompt},
+                {"role": "user", "content": prompt}
+            ],
             temperature=0
         )
-        result_text = response.output_text.strip().rstrip('.').lower()
+        result_text = response.choices[0].message.content.strip().rstrip('.').lower()
         
         result = {"correct": result_text == "correct", "message": result_text}
         
