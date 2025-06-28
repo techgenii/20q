@@ -14,6 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 from backend.app import app
