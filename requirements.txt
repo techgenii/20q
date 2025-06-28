@@ -1,11 +1,13 @@
 fastapi
 uvicorn
+mangum
 pydantic
+pydantic[email]
 supabase
-requests
-python-dotenv
 openai
+requests
+python-multipart
+python-dotenv
 aiohttp
 email-validator
-python-multipart
-mangum
+pytest

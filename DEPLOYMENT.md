@@ -1,89 +1,51 @@
-# Deployment Guide
+# Deployment Guide: Whisper Chase 20 Questions (AWS SAM)
 
-This guide explains how to deploy the 20Q Game API to AWS Lambda using GitHub Actions.
+This guide explains how to deploy the FastAPI backend to AWS Lambda using AWS SAM (Serverless Application Model).
 
 ## Prerequisites
+- AWS CLI configured with credentials
+- AWS SAM CLI installed
+- Python 3.13 installed
+- Node.js v22.17.0 or higher (for frontend)
+- Supabase project set up
 
-1. **AWS Account** with appropriate permissions
-2. **GitHub Repository** with the 20Q codebase
-3. **External Service API Keys** (Supabase, OpenAI, ElevenLabs)
+## Environment Variables
+Set these as parameters in your SAM template or in the AWS Lambda environment:
+- SUPABASE_URL
+- SUPABASE_SERVICE_ROLE_KEY
+- SUPABASE_ANON_KEY
+- OPENAI_API_KEY
+- ELEVENLABS_API_KEY
+- ELEVENLABS_VOICE_ID
 
-## Setup Instructions
+## Build and Deploy
 
-### 1. AWS Setup
+1. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt -t backend
+   ```
 
-#### Create IAM User for GitHub Actions
-```bash
-# Create a new IAM user
-aws iam create-user --user-name github-actions-20q
+2. **Build the SAM application:**
+   ```bash
+   sam build
+   ```
 
-# Create access keys
-aws iam create-access-key --user-name github-actions-20q
+3. **Deploy to AWS Lambda:**
+   ```bash
+   sam deploy --guided
+   ```
+   - The first time, SAM will prompt for stack name, region, and environment variables.
+   - On subsequent deploys, you can use `sam deploy` to reuse the configuration.
 
-# Attach necessary policies
-aws iam attach-user-policy --user-name github-actions-20q --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
-```
+## CI/CD with GitHub Actions
+- The workflow `.github/workflows/sam-deploy.yml` will run tests and deploy automatically on push to `main`.
+- All deployment is now handled via AWS SAM.
 
-**Note:** For production, use more restrictive policies. The minimum required permissions are:
-- `AWSLambda_FullAccess`
-- `IAMFullAccess` (for creating roles)
-- `CloudWatchLogsFullAccess`
-- `APIGatewayAdministrator`
+## Notes
+- All infrastructure is defined in `template.yaml`.
+- For local testing, use `sam local start-api`.
 
-### 2. GitHub Secrets Setup
-
-Go to your GitHub repository → Settings → Secrets and variables → Actions, and add the following secrets:
-
-#### AWS Credentials
-- `AWS_ACCESS_KEY_ID` - Your AWS access key
-- `AWS_SECRET_ACCESS_KEY` - Your AWS secret key
-
-#### Supabase Configuration
-- `SUPABASE_URL` - Your Supabase project URL
-- `SUPABASE_KEY` - Your Supabase service role key
-- `SUPABASE_ANON_KEY` - Your Supabase anon key
-- `SUPABASE_SERVICE_ROLE_KEY` - Your Supabase service role key
-
-#### OpenAI Configuration
-- `OPENAI_API_KEY` - Your OpenAI API key
-
-#### ElevenLabs Configuration
-- `ELEVENLABS_API_KEY` - Your ElevenLabs API key
-- `ELEVENLABS_VOICE_ID` - Default voice ID (optional, defaults to `pNInz6obpgDQGcFmaJgB`)
-
-### 3. Deployment Workflows
-
-The repository includes two GitHub Actions workflows:
-
-#### Production Deployment (`deploy.yml`)
-- **Triggers:** Push to `main` branch
-- **Environment:** Production (`prod` stage)
-- **URL Pattern:** `https://[api-id].execute-api.us-east-1.amazonaws.com/prod/`
-
-#### Staging Deployment (`deploy-staging.yml`)
-- **Triggers:** Pull requests to `main`, push to `develop` or `staging` branches
-- **Environment:** Staging (`staging` stage)
-- **URL Pattern:** `https://[api-id].execute-api.us-east-1.amazonaws.com/staging/`
-
-### 4. Manual Deployment
-
-For local testing or manual deployment:
-
-```bash
-cd backend
-
-# Set environment variables
-export AWS_ACCESS_KEY_ID="your-key"
-export AWS_SECRET_ACCESS_KEY="your-secret"
-export SUPABASE_URL="your-url"
-# ... (set all other required variables)
-
-# Deploy to staging
-./deploy.sh staging us-east-1
-
-# Deploy to production
-./deploy.sh prod us-east-1
-```
+---
 
 ## API Endpoints
 
@@ -114,11 +76,9 @@ https://[api-id].execute-api.us-east-1.amazonaws.com/staging/
 
 ### View Logs
 ```bash
-# Production logs
-npx serverless logs -f api --stage prod --region us-east-1
-
-# Staging logs
-npx serverless logs -f api --stage staging --region us-east-1
+# View Lambda logs in CloudWatch
+aws logs describe-log-groups
+aws logs get-log-events --log-group-name /aws/lambda/<function-name> --log-stream-name <stream-name>
 ```
 
 ### CloudWatch Dashboard
@@ -143,7 +103,7 @@ npx serverless logs -f api --stage staging --region us-east-1
    - Check for version conflicts
 
 4. **Lambda Timeout**
-   - Increase timeout in `serverless.yml` if needed
+   - Increase timeout in your SAM template if needed
    - Optimize code for faster execution
 
 ### Debugging
@@ -159,8 +119,7 @@ npx serverless logs -f api --stage staging --region us-east-1
    - Review recent log entries
 
 3. **Test Locally**
-   - Use the manual deployment script
-   - Test with `serverless offline` for local development
+   - Use `sam local start-api` for local development
 
 ## Security Considerations
 

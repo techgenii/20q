@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 20Q FastAPI Lambda (us-west-2)
+
+Parameters:
+  SUPABASE_URL:
+    Type: String
+  SUPABASE_SERVICE_ROLE_KEY:
+    Type: String
+  SUPABASE_ANON_KEY:
+    Type: String
+  OPENAI_API_KEY:
+    Type: String
+  ELEVENLABS_API_KEY:
+    Type: String
+  ELEVENLABS_VOICE_ID:
+    Type: String
+
+Resources:
+  FastApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/
+      Handler: app.handler
+      Runtime: python3.13
+      Timeout: 30
+      MemorySize: 512
+      Environment:
+        Variables:
+          SUPABASE_URL: !Ref SUPABASE_URL
+          SUPABASE_SERVICE_ROLE_KEY: !Ref SUPABASE_SERVICE_ROLE_KEY
+          SUPABASE_ANON_KEY: !Ref SUPABASE_ANON_KEY
+          OPENAI_API_KEY: !Ref OPENAI_API_KEY
+          ELEVENLABS_API_KEY: !Ref ELEVENLABS_API_KEY
+          ELEVENLABS_VOICE_ID: !Ref ELEVENLABS_VOICE_ID
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY 

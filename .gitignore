@@ -37,14 +37,20 @@ $RECYCLE.BIN/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
 
 # C extensions
 *.pyd
 
 # Distribution / packaging
-.Python
 build/
 develop-eggs/
 dist/
@@ -66,10 +72,6 @@ MANIFEST
 # PyInstaller
 *.manifest
 *.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
 
 # Unit test / coverage reports
 htmlcov/
@@ -136,15 +138,6 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -178,8 +171,7 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
+pnpm-debug.log*
 
 # Runtime data
 pids
@@ -387,3 +379,57 @@ tramp
 # Local development
 local/
 dev/
+
+# Remove old Serverless Framework ignores
+# (serverless.yml, .serverless/, deploy.sh) are no longer needed
+
+# Environment files
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# VSCode/IDE
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test/coverage
+htmlcov/
+.coverage
+.pytest_cache/
+coverage.xml
+
+# AWS SAM build artifacts
+.aws-sam/
+
+# Build
+/dist/
+/build/
+*.egg-info/
+
+# Misc
+*.log
