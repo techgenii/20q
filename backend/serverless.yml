@@ -1,0 +1,84 @@
+service: 20q-game-api
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.11
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    # Supabase configuration
+    SUPABASE_URL: ${env:SUPABASE_URL}
+    SUPABASE_KEY: ${env:SUPABASE_KEY}
+    SUPABASE_ANON_KEY: ${env:SUPABASE_ANON_KEY}
+    SUPABASE_SERVICE_ROLE_KEY: ${env:SUPABASE_SERVICE_ROLE_KEY}
+    
+    # OpenAI configuration
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY}
+    
+    # ElevenLabs configuration
+    ELEVENLABS_API_KEY: ${env:ELEVENLABS_API_KEY}
+    ELEVENLABS_VOICE_ID: ${env:ELEVENLABS_VOICE_ID, 'pNInz6obpgDQGcFmaJgB'}
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: non-linux
+    layer:
+      name: python-deps
+      description: Python dependencies for 20Q Game API
+    noDeploy:
+      - coverage
+      - pytest
+      - pytest-cov
+      - black
+      - flake8
+      - mypy
+
+functions:
+  api:
+    handler: app.handler
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
+    timeout: 30
+    memorySize: 512
+    environment:
+      # Add any function-specific environment variables here
+      PYTHONPATH: /opt/python
+
+package:
+  patterns:
+    - '!node_modules/**'
+    - '!tests/**'
+    - '!htmlcov/**'
+    - '!__pycache__/**'
+    - '!*.pyc'
+    - '!.pytest_cache/**'
+    - '!.coverage'
+    - '!*.log'
+    - '!.env*'
+    - '!.git/**'
+    - '!.vscode/**'
+    - '!.idea/**'
+    - '!*.md'
+    - '!requirements-dev.txt'
+    - '!pytest.ini'
+    - '!setup.py'
+    - '!MANIFEST.in'
+    - '!LICENSE'
+    - '!README.md'
+
+iam:
+  role:
+    statements:
+      - Effect: Allow
+        Action:
+          - logs:CreateLogGroup
+          - logs:CreateLogStream
+          - logs:PutLogEvents
+        Resource: "*" 

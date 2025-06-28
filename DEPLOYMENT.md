@@ -1,175 +1,197 @@
-# Deployment Guide for 20Q Game
+# Deployment Guide
 
-This guide covers setting up CI/CD deployment to AWS using GitHub Actions.
+This guide explains how to deploy the 20Q Game API to AWS Lambda using GitHub Actions.
 
 ## Prerequisites
 
 1. **AWS Account** with appropriate permissions
-2. **GitHub Repository** with your 20Q code
-3. **AWS CLI** configured locally (for initial setup)
+2. **GitHub Repository** with the 20Q codebase
+3. **External Service API Keys** (Supabase, OpenAI, ElevenLabs)
 
-## AWS Infrastructure Setup
+## Setup Instructions
 
-### 1. Create AWS Lambda Function
+### 1. AWS Setup
 
+#### Create IAM User for GitHub Actions
 ```bash
-# Create the Lambda function
-aws lambda create-function \
-  --function-name 20q-backend \
-  --runtime python3.11 \
-  --role arn:aws:iam::YOUR_ACCOUNT_ID:role/lambda-execution-role \
-  --handler app.handler \
-  --zip-file fileb://lambda-deployment.zip \
-  --timeout 30 \
-  --memory-size 512
+# Create a new IAM user
+aws iam create-user --user-name github-actions-20q
+
+# Create access keys
+aws iam create-access-key --user-name github-actions-20q
+
+# Attach necessary policies
+aws iam attach-user-policy --user-name github-actions-20q --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
 ```
 
-### 2. Create S3 Bucket for Frontend
+**Note:** For production, use more restrictive policies. The minimum required permissions are:
+- `AWSLambda_FullAccess`
+- `IAMFullAccess` (for creating roles)
+- `CloudWatchLogsFullAccess`
+- `APIGatewayAdministrator`
+
+### 2. GitHub Secrets Setup
+
+Go to your GitHub repository → Settings → Secrets and variables → Actions, and add the following secrets:
+
+#### AWS Credentials
+- `AWS_ACCESS_KEY_ID` - Your AWS access key
+- `AWS_SECRET_ACCESS_KEY` - Your AWS secret key
+
+#### Supabase Configuration
+- `SUPABASE_URL` - Your Supabase project URL
+- `SUPABASE_KEY` - Your Supabase service role key
+- `SUPABASE_ANON_KEY` - Your Supabase anon key
+- `SUPABASE_SERVICE_ROLE_KEY` - Your Supabase service role key
+
+#### OpenAI Configuration
+- `OPENAI_API_KEY` - Your OpenAI API key
+
+#### ElevenLabs Configuration
+- `ELEVENLABS_API_KEY` - Your ElevenLabs API key
+- `ELEVENLABS_VOICE_ID` - Default voice ID (optional, defaults to `pNInz6obpgDQGcFmaJgB`)
+
+### 3. Deployment Workflows
+
+The repository includes two GitHub Actions workflows:
+
+#### Production Deployment (`deploy.yml`)
+- **Triggers:** Push to `main` branch
+- **Environment:** Production (`prod` stage)
+- **URL Pattern:** `https://[api-id].execute-api.us-east-1.amazonaws.com/prod/`
+
+#### Staging Deployment (`deploy-staging.yml`)
+- **Triggers:** Pull requests to `main`, push to `develop` or `staging` branches
+- **Environment:** Staging (`staging` stage)
+- **URL Pattern:** `https://[api-id].execute-api.us-east-1.amazonaws.com/staging/`
+
+### 4. Manual Deployment
+
+For local testing or manual deployment:
 
 ```bash
-# Create S3 bucket for static website hosting
-aws s3 mb s3://your-20q-frontend-bucket
-aws s3 website s3://your-20q-frontend-bucket --index-document index.html --error-document index.html
-```
-
-### 3. Create CloudFront Distribution
-
-```bash
-# Create CloudFront distribution for the S3 bucket
-aws cloudfront create-distribution \
-  --distribution-config file://cloudfront-config.json
-```
-
-### 4. Set up IAM Roles
-
-Create an IAM user with the following permissions:
-- Lambda: Full access
-- API Gateway: Full access
-- S3: Full access to your bucket
-- CloudFront: Full access
-- IAM: Limited permissions for role assumption
-
-## GitHub Secrets Configuration
-
-Add the following secrets to your GitHub repository (Settings > Secrets and variables > Actions):
-
-### AWS Credentials
-- `AWS_ACCESS_KEY_ID`: Your AWS access key
-- `AWS_SECRET_ACCESS_KEY`: Your AWS secret key
-- `AWS_ACCOUNT_ID`: Your AWS account ID
-
-### Application Secrets
-- `SUPABASE_URL`: Your Supabase project URL
-- `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase service role key
-- `SUPABASE_ANON_KEY`: Your Supabase anonymous key
-- `ELEVENLABS_API_KEY`: Your ElevenLabs API key
-- `ELEVENLABS_VOICE_ID`: Your ElevenLabs voice ID
-- `ELEVENLABS_BASE_URL`: ElevenLabs API base URL
-- `OPENAI_API_KEY`: Your OpenAI API key
-
-### Frontend Configuration
-- `S3_BUCKET_NAME`: Your S3 bucket name for frontend hosting
-- `CLOUDFRONT_DISTRIBUTION_ID`: Your CloudFront distribution ID
-- `VITE_API_URL`: Your API Gateway URL
-
-## Deployment Process
-
-### 1. Initial Setup
-
-1. Push your code to the `main` branch
-2. GitHub Actions will automatically:
-   - Run tests
-   - Build the backend
-   - Deploy to AWS Lambda
-   - Set up API Gateway
-   - Deploy frontend to S3
-   - Invalidate CloudFront cache
-
-### 2. Manual Deployment
-
-To deploy manually:
-
-```bash
-# Backend deployment
 cd backend
-pip install -r requirements.txt -t .
-zip -r ../lambda-deployment.zip . -x "*.pyc" "__pycache__/*" "tests/*" "*.md"
 
-aws lambda update-function-code \
-  --function-name 20q-backend \
-  --zip-file fileb://lambda-deployment.zip
+# Set environment variables
+export AWS_ACCESS_KEY_ID="your-key"
+export AWS_SECRET_ACCESS_KEY="your-secret"
+export SUPABASE_URL="your-url"
+# ... (set all other required variables)
 
-# Frontend deployment
-cd frontend
-npm run build
-aws s3 sync dist/ s3://your-bucket-name --delete
-aws cloudfront create-invalidation --distribution-id YOUR_DISTRIBUTION_ID --paths "/*"
+# Deploy to staging
+./deploy.sh staging us-east-1
+
+# Deploy to production
+./deploy.sh prod us-east-1
 ```
 
-## Environment Variables
+## API Endpoints
 
-### Backend (Lambda)
-The following environment variables are automatically set by the CI/CD pipeline:
+Once deployed, your API will be available at:
 
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `SUPABASE_ANON_KEY`
-- `ELEVENLABS_API_KEY`
-- `ELEVENLABS_VOICE_ID`
-- `ELEVENLABS_BASE_URL`
-- `OPENAI_API_KEY`
+### Production
+```
+https://[api-id].execute-api.us-east-1.amazonaws.com/prod/
+```
 
-### Frontend
-The frontend uses the `VITE_API_URL` environment variable to connect to the backend API.
+### Staging
+```
+https://[api-id].execute-api.us-east-1.amazonaws.com/staging/
+```
+
+### Available Endpoints
+- `POST /auth/signup` - User registration
+- `POST /auth/login` - User login
+- `POST /start_game` - Start a new game
+- `POST /join_game` - Join an existing game
+- `POST /ask_question` - Ask a question
+- `POST /make_guess` - Make a guess
+- `GET /game/{game_id}` - Get game information
+- `POST /voice/text-to-speech` - Text-to-speech conversion
+- `GET /voice/voices` - Get available voices
 
 ## Monitoring and Logs
 
-### Lambda Logs
+### View Logs
 ```bash
-aws logs describe-log-groups --log-group-name-prefix "/aws/lambda/20q-backend"
-aws logs tail /aws/lambda/20q-backend --follow
+# Production logs
+npx serverless logs -f api --stage prod --region us-east-1
+
+# Staging logs
+npx serverless logs -f api --stage staging --region us-east-1
 ```
 
-### API Gateway Logs
-Enable CloudWatch logging for API Gateway to monitor API requests and responses.
-
-### CloudFront Logs
-Enable access logging for CloudFront to monitor frontend usage.
+### CloudWatch Dashboard
+- Logs are automatically sent to CloudWatch
+- Create custom dashboards for monitoring
+- Set up alarms for errors and performance metrics
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Lambda Timeout**: Increase timeout in Lambda configuration
-2. **Memory Issues**: Increase memory allocation for Lambda
-3. **CORS Issues**: Configure CORS in API Gateway
-4. **Environment Variables**: Ensure all secrets are properly set in GitHub
+1. **Environment Variables Missing**
+   - Ensure all required secrets are set in GitHub
+   - Check that variable names match exactly
+
+2. **AWS Permissions**
+   - Verify IAM user has necessary permissions
+   - Check CloudTrail for permission denied errors
+
+3. **Python Dependencies**
+   - Ensure `requirements.txt` includes all dependencies
+   - Check for version conflicts
+
+4. **Lambda Timeout**
+   - Increase timeout in `serverless.yml` if needed
+   - Optimize code for faster execution
 
 ### Debugging
 
-1. Check GitHub Actions logs for deployment errors
-2. Monitor Lambda CloudWatch logs
-3. Test API endpoints directly
-4. Verify environment variables are set correctly
+1. **Check GitHub Actions Logs**
+   - Go to Actions tab in your repository
+   - Click on the failed workflow
+   - Review step-by-step logs
+
+2. **Check AWS CloudWatch Logs**
+   - Navigate to CloudWatch → Log groups
+   - Find your Lambda function logs
+   - Review recent log entries
+
+3. **Test Locally**
+   - Use the manual deployment script
+   - Test with `serverless offline` for local development
 
 ## Security Considerations
 
-1. **IAM Roles**: Use least privilege principle
-2. **Secrets**: Never commit secrets to version control
-3. **HTTPS**: Always use HTTPS for production
-4. **CORS**: Configure CORS properly for your domain
-5. **Rate Limiting**: Consider implementing rate limiting
+1. **API Keys**
+   - Never commit API keys to the repository
+   - Use GitHub Secrets for all sensitive data
+   - Rotate keys regularly
+
+2. **AWS Permissions**
+   - Use least privilege principle
+   - Consider using AWS IAM roles instead of access keys
+   - Enable CloudTrail for audit logging
+
+3. **Environment Separation**
+   - Use different API keys for staging/production
+   - Separate Supabase projects for different environments
+   - Use different OpenAI API keys per environment
 
 ## Cost Optimization
 
-1. **Lambda**: Monitor execution time and memory usage
-2. **API Gateway**: Consider caching strategies
-3. **CloudFront**: Use appropriate cache settings
-4. **S3**: Use lifecycle policies for old files
+1. **Lambda Configuration**
+   - Adjust memory allocation based on needs
+   - Set appropriate timeout values
+   - Use provisioned concurrency for consistent performance
 
-## Backup and Recovery
+2. **API Gateway**
+   - Enable caching where appropriate
+   - Use usage plans to control rate limits
+   - Monitor usage and adjust limits
 
-1. **Database**: Set up automated backups for Supabase
-2. **Code**: Use Git tags for version management
-3. **Configuration**: Document all configuration changes
-4. **Rollback**: Keep previous Lambda versions for quick rollback 
+3. **Monitoring**
+   - Set up billing alerts
+   - Monitor Lambda execution times
+   - Track API Gateway usage 
