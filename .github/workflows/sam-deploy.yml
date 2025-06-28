@@ -2,8 +2,7 @@ name: Deploy SAM App
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -12,6 +11,7 @@ jobs:
     env:
       AWS_REGION: us-west-2
       PYTHON_VERSION: '3.13'
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,9 +28,38 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install AWS SAM CLI
+      - name: Install dependencies
         run: |
-          pip install aws-sam-cli
+          pip install aws-sam-cli pytest
 
-      - name: Deploy SAM app
-        run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --stack-name 20q-fastapi-lambda --capabilities CAPABILITY_IAM --region ${{ env.AWS_REGION }} --parameter-overrides SUPABASE_URL=${{ secrets.SUPABASE_URL }} SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} ELEVENLABS_API_KEY=${{ secrets.ELEVENLABS_API_KEY }} ELEVENLABS_VOICE_ID=${{ secrets.ELEVENLABS_VOICE_ID }} 
+      - name: Run tests
+        run: |
+          pytest tests/
+
+      - name: Build SAM app
+        run: |
+          sam build
+
+      - name: Validate SAM template
+        run: |
+          sam validate --region ${{ env.AWS_REGION }}
+
+      - name: Deploy SAM app using samconfig.toml
+        run: |
+          sam deploy --config-env default
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
+
+      - name: Stream Lambda logs after deployment
+        run: |
+          sam logs \
+            --stack-name 20q-fastapi-lambda \
+            --tail \
+            --region ${{ env.AWS_REGION }} \
+            --name WhisperChaseFunction
+        continue-on-error: true

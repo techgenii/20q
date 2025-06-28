@@ -17,9 +17,10 @@ Parameters:
     Type: String
 
 Resources:
-  FastApiFunction:
+  WhisperChaseFunction:
     Type: AWS::Serverless::Function
     Properties:
+      FunctionName: WhisperChase
       CodeUri: backend/
       Handler: app.handler
       Runtime: python3.13
