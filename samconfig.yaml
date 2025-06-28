@@ -21,4 +21,3 @@ default:
       capabilities: "CAPABILITY_IAM"
       disable_rollback: false
       resolve_s3: true
-      parameter_overrides: "ParameterKey=SUPABASE_URL,ParameterValue="$SUPABASE_URL" ParameterKey=ELEVENLABS_VOICE_ID,ParameterValue=9BWtsMINqrJLrRacOk9x"
