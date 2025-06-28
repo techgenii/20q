@@ -77,7 +77,7 @@ Whisper Chase: 20 Questions is a multiplayer guessing game where you and others 
 ## 🎯 How to Play
 
 1. **Create or Join a Game**: Start a new game or join an existing room in Whisper Chase
-2. **Think of an Object**: One player thinks of any object, person, or concept
+2. **Think of an Object**: Ths AI thinks of any object, person, or concept
 3. **Ask Questions**: Other players take turns asking yes/no questions
 4. **Make Guesses**: Try to guess the object within 20 questions
 5. **Score Points**: Earn points for correct guesses and clever questions
