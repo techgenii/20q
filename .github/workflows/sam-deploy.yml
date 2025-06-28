@@ -11,6 +11,7 @@ jobs:
     env:
       AWS_REGION: us-west-2
       PYTHON_VERSION: '3.13'
+      ELEVENLABS_VOICE_ID: '21m00Tcm4TlvDq8ikWAM'
 
     steps:
       - name: Checkout code
@@ -36,7 +37,7 @@ jobs:
           if [ -z "${{ secrets.SUPABASE_ANON_KEY }}" ]; then echo "ERROR: SUPABASE_ANON_KEY is not set"; exit 1; fi
           if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then echo "ERROR: OPENAI_API_KEY is not set"; exit 1; fi
           if [ -z "${{ secrets.ELEVENLABS_API_KEY }}" ]; then echo "ERROR: ELEVENLABS_API_KEY is not set"; exit 1; fi
-          if [ -z "${{ env.ELEVENLABS_VOICE_ID }}" ]; then echo "ERROR: ELEVENLABS_VOICE_ID is not set"; exit 1; fi
+          if [ -z "${{ envs.ELEVENLABS_VOICE_ID }}" ]; then echo "ERROR: ELEVENLABS_VOICE_ID is not set"; exit 1; fi
           if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then echo "ERROR: AWS_ACCESS_KEY_ID is not set"; exit 1; fi
           if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then echo "ERROR: AWS_SECRET_ACCESS_KEY is not set"; exit 1; fi
           echo "✅ All required environment variables are set"
@@ -68,7 +69,7 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
-          ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
+          ELEVENLABS_VOICE_ID: ${{ envs.ELEVENLABS_VOICE_ID }}
 
       - name: Stream Lambda logs after deployment
         run: |
