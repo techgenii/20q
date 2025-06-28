@@ -1,8 +1,25 @@
-env:
-  AWS_REGION: us-west-2
-  PYTHON_VERSION: '3.13'
+name: Deploy SAM App
 
-# ... rest of the workflow remains unchanged ...
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-west-2
+      PYTHON_VERSION: '3.13'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Set up AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -11,7 +28,9 @@ env:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # ...
+      - name: Install AWS SAM CLI
+        run: |
+          pip install aws-sam-cli
 
       - name: Deploy SAM app
         run: |
