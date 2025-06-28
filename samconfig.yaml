@@ -1,3 +1,4 @@
+
 version: 0.1
 default:
   global:
@@ -20,10 +21,5 @@ default:
       fail_on_empty_changeset: false
       capabilities: "CAPABILITY_IAM"
       disable_rollback: false
-      parameter_overrides:
-        - "SUPABASE_URL=${SUPABASE_URL}"
-        - "SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}"
-        - "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}"
-        - "OPENAI_API_KEY=${OPENAI_API_KEY}"
-        - "ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}"
-        - "ELEVENLABS_VOICE_ID=${ELEVENLABS_VOICE_ID}"
+      resolve_s3: true
+      # Note: parameter_overrides removed from config - passed via command line instead
