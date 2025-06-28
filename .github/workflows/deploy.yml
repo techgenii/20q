@@ -110,8 +110,15 @@ jobs:
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip setuptools wheel
-        # Copy pip configuration to prefer pre-built wheels
-        cp pip.conf ~/.pip/pip.conf || mkdir -p ~/.pip && cp pip.conf ~/.pip/pip.conf
+        
+        # Create pip configuration inline to prefer pre-built wheels
+        mkdir -p ~/.pip
+        cat > ~/.pip/pip.conf << 'EOF'
+        [global]
+        prefer-binary = true
+        no-cache-dir = true
+        only-binary = :all:
+        EOF
         
         # Try multiple installation strategies
         echo "Attempting to install dependencies..."
