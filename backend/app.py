@@ -39,7 +39,11 @@ from .game_logic import (
 from .supabase_client import get_supabase_client, get_supabase_auth_client
 
 # Initialize FastAPI app
-app = FastAPI(title="Whisper Chase: 20 Questions")
+import os
+
+# Use root_path only in production (AWS Lambda)
+root_path = "/Prod" if os.getenv("AWS_LAMBDA_FUNCTION_NAME") else ""
+app = FastAPI(title="Whisper Chase: 20 Questions", root_path=root_path)
 
 # Security
 security = HTTPBearer()

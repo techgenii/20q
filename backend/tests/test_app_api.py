@@ -20,7 +20,8 @@ from unittest.mock import patch, MagicMock
 from backend.app import app
 import pytest
 
-client = TestClient(app)
+# Create TestClient with base_url to handle root_path
+client = TestClient(app, base_url="http://testserver")
 
 @pytest.fixture(autouse=True, scope="module")
 def override_auth_dependencies():
