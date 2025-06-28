@@ -76,7 +76,7 @@ jobs:
           echo "Content of samconfig.toml:"
           cat samconfig.toml
 
-      - name: Deploy SAM app using samconfig.toml
+      - name: Deploy SAM app
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -85,7 +85,29 @@ jobs:
           ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
           ELEVENLABS_VOICE_ID: ${{ env.ELEVENLABS_VOICE_ID }}
         run: |
-          sam deploy
+          echo "Debug: Checking samconfig.toml exists and is readable"
+          ls -la samconfig.toml
+          echo "Debug: Current working directory"
+          pwd
+          echo "Debug: Environment variables for SAM"
+          echo "SUPABASE_URL is set: $([ -n "$SUPABASE_URL" ] && echo "yes" || echo "no")"
+          echo "Attempting deployment with explicit config file reference..."
+          sam deploy --config-file samconfig.toml --config-env default || {
+            echo "Config file approach failed, falling back to explicit parameters..."
+            sam deploy \
+              --no-confirm-changeset \
+              --no-fail-on-empty-changeset \
+              --stack-name 20q-fastapi-lambda \
+              --capabilities CAPABILITY_IAM \
+              --region us-west-2 \
+              --parameter-overrides \
+                SUPABASE_URL="$SUPABASE_URL" \
+                SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY" \
+                SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+                OPENAI_API_KEY="$OPENAI_API_KEY" \
+                ELEVENLABS_API_KEY="$ELEVENLABS_API_KEY" \
+                ELEVENLABS_VOICE_ID="$ELEVENLABS_VOICE_ID"
+          }
 
       - name: Stream Lambda logs after deployment
         run: |
