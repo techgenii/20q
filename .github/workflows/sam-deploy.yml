@@ -85,13 +85,3 @@ jobs:
               "ParameterKey=OPENAIAPIKEY,ParameterValue=${{ secrets.OPENAI_API_KEY }}" \
               "ParameterKey=ELEVENLABSAPIKEY,ParameterValue=${{ secrets.ELEVENLABS_API_KEY }}" \
               "ParameterKey=ELEVENLABSVOICEID,ParameterValue=${{ env.ELEVENLABS_VOICE_ID }}"
-
-      - name: Stream Lambda logs after deployment
-        if: success()
-        run: |
-          sam logs \
-            --stack-name ${{ env.STACK_NAME }} \
-            --tail \
-            --region ${{ env.AWS_REGION }} \
-            --name WhisperChaseFunction
-        continue-on-error: true
