@@ -38,10 +38,4 @@ jobs:
             --stack-name 20q-fastapi-lambda \
             --capabilities CAPABILITY_IAM \
             --region ${{ env.AWS_REGION }} \
-            --parameter-overrides \
-              SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
-              SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} \
-              SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
-              OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
-              ELEVENLABS_API_KEY=${{ secrets.ELEVENLABS_API_KEY }} \
-              ELEVENLABS_VOICE_ID=${{ secrets.ELEVENLABS_VOICE_ID }} 
+            --parameter-overrides SUPABASE_URL=${{ secrets.SUPABASE_URL }} SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} ELEVENLABS_API_KEY=${{ secrets.ELEVENLABS_API_KEY }} ELEVENLABS_VOICE_ID=${{ secrets.ELEVENLABS_VOICE_ID }} 
