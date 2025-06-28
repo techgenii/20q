@@ -257,13 +257,29 @@ def test_get_supabase_client_success(monkeypatch):
     # Clear any cached client
     supabase_client._supabase_client = None
     
-    # Test that we can get a client
-    client = supabase_client.get_supabase_client()
-    assert client is not None
-    assert os.getenv("SUPABASE_URL") == "https://test.supabase.co"
+    # Mock the create_client function
+    with patch('backend.supabase_client.create_client') as mock_create_client:
+        mock_client = MagicMock()
+        mock_create_client.return_value = mock_client
+        
+        # Test that we can get a client
+        client = supabase_client.get_supabase_client()
+        
+        # Verify the client was created with correct parameters
+        assert client is not None
+        mock_create_client.assert_called_once_with("https://test.supabase.co", "test-service-key")
 
 def test_get_supabase_client_missing_env_vars(monkeypatch):
     """Test that appropriate errors are raised when environment variables are missing"""
+    # Clear any cached clients
+    supabase_client._supabase_client = None
+    supabase_client._supabase_auth_client = None
+    
+    # Clear environment variables
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
+    monkeypatch.delenv("SUPABASE_ANON_KEY", raising=False)
+    
     # Test missing SUPABASE_URL
     with pytest.raises(ValueError, match="SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required"):
         supabase_client.get_supabase_client()
