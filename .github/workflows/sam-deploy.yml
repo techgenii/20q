@@ -53,7 +53,7 @@ jobs:
           cd backend
           PYTHONPATH=$PYTHONPATH:. pytest tests/
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASEURL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -68,7 +68,7 @@ jobs:
 
       - name: Deploy SAM app
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASEURL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -79,7 +79,7 @@ jobs:
             --config-file samconfig.yaml \
             --config-env default \
             --parameter-overrides \
-              "ParameterKey=SUPABASE_URL,ParameterValue=${{ secrets.SUPABASE_URL }}" \
+              "ParameterKey=SUPABASEURL,ParameterValue=${{ secrets.SUPABASE_URL }}" \
               "ParameterKey=SUPABASE_SERVICE_ROLE_KEY,ParameterValue=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
               "ParameterKey=SUPABASE_ANON_KEY,ParameterValue=${{ secrets.SUPABASE_ANON_KEY }}" \
               "ParameterKey=OPENAI_API_KEY,ParameterValue=${{ secrets.OPENAI_API_KEY }}" \

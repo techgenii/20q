@@ -88,13 +88,13 @@ def get_supabase_client() -> Client:
     global _supabase_client
     if _supabase_client is None:
         # Get environment variables for Supabase configuration
-        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_url = os.getenv("SUPABASEURL")
         supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
         
         # Validate that required environment variables are present
         if not supabase_url or not supabase_key:
             raise ValueError(
-                "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required. "
+                "SUPABASEURL and SUPABASE_SERVICE_ROLE_KEY environment variables are required. "
                 "Please check your environment configuration."
             )
         
@@ -128,13 +128,13 @@ def get_supabase_auth_client() -> Client:
     global _supabase_auth_client
     if _supabase_auth_client is None:
         # Get environment variables for Supabase configuration
-        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_url = os.getenv("SUPABASEURL")
         supabase_key = os.getenv("SUPABASE_ANON_KEY")
         
         # Validate that required environment variables are present
         if not supabase_url or not supabase_key:
             raise ValueError(
-                "SUPABASE_URL and SUPABASE_ANON_KEY environment variables are required. "
+                "SUPABASEURL and SUPABASE_ANON_KEY environment variables are required. "
                 "Please check your environment configuration."
             )
         

@@ -24,13 +24,13 @@ import backend.supabase_client as supabase_client
 @pytest.fixture(autouse=True)
 def setup_environment_variables(monkeypatch):
     """Set up test environment variables"""
-    monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
+    monkeypatch.setenv("SUPABASEURL", "https://test.supabase.co")
     monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
     monkeypatch.setenv("SUPABASE_ANON_KEY", "test-anon-key")
 
 def test_environment_variables_are_set():
     """Test that environment variables are properly set"""
-    assert os.getenv("SUPABASE_URL") == "https://test.supabase.co"
+    assert os.getenv("SUPABASEURL") == "https://test.supabase.co"
     assert os.getenv("SUPABASE_SERVICE_ROLE_KEY") == "test-service-role-key"
     assert os.getenv("SUPABASE_ANON_KEY") == "test-anon-key"
 
@@ -41,10 +41,10 @@ def test_environment_variables_missing():
     supabase_client._supabase_auth_client = None
     
     with patch.dict(os.environ, {}, clear=True):
-        with pytest.raises(ValueError, match="SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required"):
+        with pytest.raises(ValueError, match="SUPABASEURL and SUPABASE_SERVICE_ROLE_KEY environment variables are required"):
             supabase_client.get_supabase_client()
         
-        with pytest.raises(ValueError, match="SUPABASE_URL and SUPABASE_ANON_KEY environment variables are required"):
+        with pytest.raises(ValueError, match="SUPABASEURL and SUPABASE_ANON_KEY environment variables are required"):
             supabase_client.get_supabase_auth_client()
 
 @patch('backend.supabase_client.create_client')

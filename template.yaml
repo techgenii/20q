@@ -57,7 +57,7 @@ Resources:
       MemorySize: 512
       Environment:
         Variables:
-          SUPABASE_URL: !Ref SUPABASE-URL
+          SUPABASEURL: !Ref SUPABASE-URL
           SUPABASE_SERVICE_ROLE_KEY: !Ref SUPABASE-SERVICE-ROLE-KEY
           SUPABASE_ANON_KEY: !Ref SUPABASE-ANON-KEY
           OPENAI_API_KEY: !Ref OPENAI-API-KEY
