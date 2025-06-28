@@ -9,17 +9,17 @@ Globals:
     MemorySize: 512
 
 Parameters:
-  SUPABASE_URL:
+  SUPABASE-URL:
     Type: String
-  SUPABASE_SERVICE_ROLE_KEY:
+  SUPABASE-SERVICE-ROLE-KEY:
     Type: String
-  SUPABASE_ANON_KEY:
+  SUPABASE-ANON-KEY:
     Type: String
-  OPENAI_API_KEY:
+  OPENAI-API-KEY:
     Type: String
-  ELEVENLABS_API_KEY:
+  ELEVENLABS-API-KEY:
     Type: String
-  ELEVENLABS_VOICE_ID:
+  ELEVENLABS-VOICE-ID:
     Type: String
 
 Resources:
@@ -57,12 +57,12 @@ Resources:
       MemorySize: 512
       Environment:
         Variables:
-          SUPABASE_URL: !Ref SUPABASE_URL
-          SUPABASE_SERVICE_ROLE_KEY: !Ref SUPABASE_SERVICE_ROLE_KEY
-          SUPABASE_ANON_KEY: !Ref SUPABASE_ANON_KEY
-          OPENAI_API_KEY: !Ref OPENAI_API_KEY
-          ELEVENLABS_API_KEY: !Ref ELEVENLABS_API_KEY
-          ELEVENLABS_VOICE_ID: !Ref ELEVENLABS_VOICE_ID
+          SUPABASE_URL: !Ref SUPABASE-URL
+          SUPABASE_SERVICE_ROLE_KEY: !Ref SUPABASE-SERVICE-ROLE-KEY
+          SUPABASE_ANON_KEY: !Ref SUPABASE-ANON-KEY
+          OPENAI_API_KEY: !Ref OPENAI-API-KEY
+          ELEVENLABS_API_KEY: !Ref ELEVENLABS-API-KEY
+          ELEVENLABS_VOICE_ID: !Ref ELEVENLABS-VOICE-ID
       Events:
         Api:
           Type: Api
