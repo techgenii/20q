@@ -14,7 +14,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  PYTHON_VERSION: '3.11'
+  PYTHON_VERSION: '3.13'
 
 jobs:
   test-secrets:
@@ -135,7 +135,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '22.17.0'
         cache: 'npm'
         cache-dependency-path: backend/package-lock.json
 

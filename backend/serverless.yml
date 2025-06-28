@@ -8,7 +8,7 @@ frameworkVersion: '3'
 # AWS provider configuration
 provider:
   name: aws
-  runtime: python3.11  # Python runtime for Lambda
+  runtime: python3.13  # Updated to Python 3.13 runtime for Lambda
   region: us-east-1    # AWS region for deployment
   stage: ${opt:stage, 'dev'}  # Deployment stage (dev/staging/prod)
   

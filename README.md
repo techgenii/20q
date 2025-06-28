@@ -16,7 +16,7 @@ A modern implementation of the classic 20 Questions game with AI-powered respons
 
 ### Backend
 - **Framework**: FastAPI
-- **Runtime**: Python 3.11
+- **Runtime**: Python 3.13
 - **Database**: Supabase (PostgreSQL)
 - **Authentication**: Supabase Auth
 - **AI**: OpenAI API
@@ -34,8 +34,8 @@ A modern implementation of the classic 20 Questions game with AI-powered respons
 
 ## Prerequisites
 
-- Python 3.11 or higher
-- Node.js 18 or higher
+- Python 3.13 or higher
+- Node.js 22.17.0 or higher
 - AWS CLI (for deployment)
 - Supabase account
 - OpenAI API key

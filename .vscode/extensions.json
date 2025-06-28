@@ -1,0 +1,33 @@
+{
+  "recommendations": [
+    // Python
+    "ms-python.python",
+    "ms-python.black-formatter",
+    "ms-python.flake8",
+    "ms-python.pylint",
+    "ms-python.pytest-adapter",
+    // TypeScript/JavaScript
+    "ms-vscode.vscode-typescript-next",
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    // React
+    "bradlc.vscode-tailwindcss",
+    "ms-vscode.vscode-json",
+    // Git
+    "eamodio.gitlens",
+    // YAML (for serverless.yml)
+    "redhat.vscode-yaml",
+    // Docker (if needed later)
+    "ms-azuretools.vscode-docker",
+    // REST Client (for API testing)
+    "humao.rest-client",
+    // Thunder Client (alternative to Postman)
+    "rangav.vscode-thunder-client",
+    // Error Lens (better error display)
+    "usernamehw.errorlens",
+    // Auto Rename Tag (for JSX/TSX)
+    "formulahendry.auto-rename-tag",
+    // Bracket Pair Colorizer
+    "CoenraadS.bracket-pair-colorizer-2"
+  ]
+}
