@@ -31,11 +31,12 @@ jobs:
       - name: Install dependencies
         run: |
           pip install aws-sam-cli pytest
+          pip install -r requirements.txt
 
       - name: Run tests
         run: |
           cd backend
-          pytest tests/
+          PYTHONPATH=$PYTHONPATH:. pytest tests/
 
       - name: Build SAM app
         run: |
