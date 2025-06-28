@@ -1,5 +1,5 @@
 import React from 'react';
-import { Target, Gamepad2, Trophy, History, User, Volume2, LogOut } from 'lucide-react';
+import { AudioLines, Gamepad2, Trophy, History, User, Volume2, LogOut } from 'lucide-react';
 import { Screen } from '@/types';
 import { Button } from '@/components/ui/Button';
 
@@ -29,10 +29,10 @@ export const Navigation: React.FC<NavigationProps> = ({
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-3">
             <div className="bg-gradient-to-r from-purple-primary to-pink-accent p-2 rounded-xl">
-              <Target className="w-6 h-6 text-white" />
+              <AudioLines className="w-6 h-6 text-white" />
             </div>
             <div>
-              <span className="text-xl font-bold bg-gradient-to-r from-purple-primary to-pink-accent bg-clip-text text-transparent">
+              <span className="font-display text-xl font-bold bg-gradient-to-r from-purple-primary to-pink-accent bg-clip-text text-transparent">
                 Whisper Chase
               </span>
               {voiceEnabled && (

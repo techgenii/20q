@@ -51,7 +51,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 </div>
                 <div className="text-white flex-1">
                   <div className="flex items-center space-x-3 mb-2">
-                    <h1 className="text-4xl font-bold">{user.username}</h1>
+                    <h1 className="font-display text-4xl font-bold">{user.username}</h1>
                     <button
                       onClick={handleEditProfile}
                       className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-white/20 hover:bg-white/30 text-white border border-white/30 hover:border-white/40 rounded-lg transition-all font-medium"
@@ -82,7 +82,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             {/* Stats Section */}
             <div className="p-8">
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-2xl font-bold text-gray-800">Performance Stats</h2>
+                <h2 className="font-display text-2xl font-bold text-gray-800">Performance Stats</h2>
                 <div className="text-sm text-gray-500">
                   Member since {formatDate(user.joinDate)}
                 </div>
@@ -90,17 +90,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="group bg-gradient-to-br from-success-green/10 to-success-green/20 p-6 rounded-2xl border border-success-green/30 hover:shadow-lg transition-all">
-                  <div className="text-3xl font-bold text-success-green mb-2">{user.totalGames}</div>
+                  <div className="font-display text-3xl font-bold text-success-green mb-2">{user.totalGames}</div>
                   <div className="text-success-green font-semibold">Total Games</div>
                   <div className="text-sm text-success-green mt-1">All time</div>
                 </div>
                 <div className="group bg-gradient-to-br from-blue-50 to-cyan-100 p-6 rounded-2xl border border-blue-200 hover:shadow-lg transition-all">
-                  <div className="text-3xl font-bold text-blue-600 mb-2">{user.gamesWon}</div>
+                  <div className="font-display text-3xl font-bold text-blue-600 mb-2">{user.gamesWon}</div>
                   <div className="text-blue-700 font-semibold">Games Won</div>
                   <div className="text-sm text-blue-600 mt-1">Victory count</div>
                 </div>
                 <div className="group bg-gradient-to-br from-purple-primary/5 to-pink-accent/5 p-6 rounded-2xl border border-purple-primary/20 hover:shadow-lg transition-all">
-                  <div className="text-3xl font-bold text-purple-primary mb-2">{user.winRate}%</div>
+                  <div className="font-display text-3xl font-bold text-purple-primary mb-2">{user.winRate}%</div>
                   <div className="text-purple-primary font-semibold">Win Rate</div>
                   <div className="text-sm text-purple-primary mt-1">Success ratio</div>
                 </div>
@@ -112,7 +112,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           <Card variant="elevated" className="overflow-hidden">
             <div className="p-8">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-gray-800 flex items-center">
+                <h3 className="font-display text-2xl font-bold text-gray-800 flex items-center">
                   <Trophy className="w-7 h-7 mr-3 text-yellow-500" />
                   Achievements
                 </h3>
@@ -182,7 +182,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   
                   return (
                     <div key={rarity} className="text-center p-3 bg-gray-50 rounded-xl">
-                      <div className="text-2xl font-bold text-gray-800 mb-1">{count}</div>
+                      <div className="font-display text-2xl font-bold text-gray-800 mb-1">{count}</div>
                       <div className={`inline-block ${rarityInfo.className} text-xs`}>
                         {rarityInfo.text}
                       </div>
@@ -203,7 +203,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           
           {/* Quick Stats - Now appears first */}
           <Card className="p-6">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">Quick Stats</h3>
+            <h3 className="font-display text-lg font-bold text-gray-800 mb-4">Quick Stats</h3>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Games Today</span>
@@ -223,7 +223,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           {/* Recent Activity Feed - Now appears second */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-800 flex items-center">
+              <h3 className="font-display text-lg font-bold text-gray-800 flex items-center">
                 <Clock className="w-5 h-5 mr-2 text-purple-primary" />
                 Recent Activity
               </h3>

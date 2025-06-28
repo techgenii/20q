@@ -148,14 +148,14 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ history }) => {
         <div className="bg-gradient-to-r from-purple-primary to-pink-accent px-6 py-8">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-white flex items-center">
+              <h1 className="font-display text-3xl font-bold text-white flex items-center">
                 <History className="w-8 h-8 mr-3" />
                 Game History
               </h1>
               <p className="text-white/80 mt-2">Your gaming journey and achievements</p>
             </div>
             <div className="text-white/90 text-right">
-              <div className="text-2xl font-bold">{stats.totalGames}</div>
+              <div className="font-display text-2xl font-bold">{stats.totalGames}</div>
               <div className="text-sm">Total Games</div>
             </div>
           </div>
@@ -165,19 +165,19 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ history }) => {
         <div className="p-6 border-b border-gray-200 bg-gray-50">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-              <div className="text-2xl font-bold text-success-green mb-1">{stats.wins}</div>
+              <div className="font-display text-2xl font-bold text-success-green mb-1">{stats.wins}</div>
               <div className="text-sm text-gray-600">Wins</div>
             </div>
             <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-              <div className="text-2xl font-bold text-red-600 mb-1">{stats.losses}</div>
+              <div className="font-display text-2xl font-bold text-red-600 mb-1">{stats.losses}</div>
               <div className="text-sm text-gray-600">Losses</div>
             </div>
             <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-              <div className="text-2xl font-bold text-purple-primary mb-1">{stats.avgQuestions}</div>
+              <div className="font-display text-2xl font-bold text-purple-primary mb-1">{stats.avgQuestions}</div>
               <div className="text-sm text-gray-600">Avg Questions</div>
             </div>
             <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-              <div className="text-2xl font-bold text-pink-accent mb-1">
+              <div className="font-display text-2xl font-bold text-pink-accent mb-1">
                 {stats.bestGame ? stats.bestGame.questions : '-'}
               </div>
               <div className="text-sm text-gray-600">Best Game</div>
@@ -292,7 +292,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ history }) => {
           {currentPageData.length === 0 ? (
             <div className="text-center py-12">
               <History className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-600 mb-2">No games found</h3>
+              <h3 className="font-display text-lg font-semibold text-gray-600 mb-2">No games found</h3>
               <p className="text-gray-500">
                 {hasActiveFilters ? 'Try adjusting your filters' : 'Start playing to build your history!'}
               </p>

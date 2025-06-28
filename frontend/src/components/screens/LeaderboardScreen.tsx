@@ -130,14 +130,14 @@ export const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({
         <div className="bg-gradient-to-r from-purple-primary to-pink-accent px-6 py-8">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-white flex items-center">
+              <h1 className="font-display text-3xl font-bold text-white flex items-center">
                 <Trophy className="w-8 h-8 mr-3" />
                 Leaderboard
               </h1>
               <p className="text-white/80 mt-2">Top players this month</p>
             </div>
             <div className="text-white/90 text-right">
-              <div className="text-2xl font-bold">{processedData.length}</div>
+              <div className="font-display text-2xl font-bold">{processedData.length}</div>
               <div className="text-sm">Total Players</div>
             </div>
           </div>
@@ -290,7 +290,7 @@ export const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({
           {currentPageData.length === 0 ? (
             <div className="text-center py-12">
               <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-600 mb-2">No players found</h3>
+              <h3 className="font-display text-lg font-semibold text-gray-600 mb-2">No players found</h3>
               <p className="text-gray-500">
                 {hasActiveFilters ? 'Try adjusting your filters' : 'No players match your criteria'}
               </p>

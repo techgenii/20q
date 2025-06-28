@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Target } from 'lucide-react';
+import { AudioLines } from 'lucide-react';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -35,9 +35,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       <Card variant="glass" className="p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <div className="bg-gradient-to-r from-purple-primary to-pink-accent w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Target className="w-8 h-8 text-white" />
+            <AudioLines className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">
+          <h1 className="font-display text-3xl font-bold text-white mb-2">
             Whisper Chase
             <br />
             20 Questions
@@ -47,7 +47,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
 
         {showForgotPassword ? (
           <div>
-            <h2 className="text-xl font-semibold text-white mb-4 text-center">Reset Password</h2>
+            <h2 className="font-display text-xl font-semibold text-white mb-4 text-center">Reset Password</h2>
             <p className="text-white/70 text-sm mb-6 text-center">
               Enter your email address and we'll send you a link to reset your password.
             </p>

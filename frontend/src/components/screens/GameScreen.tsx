@@ -56,6 +56,25 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     }
   }, [voiceState.transcription]);
 
+  // Helper function to get answer styling based on answer value
+  const getAnswerStyling = (answer: string) => {
+    const isYes = answer?.toLowerCase() === 'yes';
+    
+    if (isYes) {
+      return {
+        containerClasses: 'bg-gradient-to-r from-success-green/10 to-success-green/20 p-4 rounded-xl border-l-4 border-success-green',
+        iconBgClasses: 'bg-success-green/30',
+        textClasses: 'text-success-green'
+      };
+    } else {
+      return {
+        containerClasses: 'bg-red-50 p-4 rounded-xl border-l-4 border-red-200',
+        iconBgClasses: 'bg-red-200',
+        textClasses: 'text-red-600'
+      };
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto p-6">
       <Card variant="elevated" className="overflow-hidden">
@@ -67,7 +86,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 <MessageCircle className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Whisper Chase <br/> 20 Questions</h1>
+                <h1 className="font-display text-2xl font-bold">Whisper Chase <br/> 20 Questions</h1>
                 <p className="text-white/80">vs QuestionMaster</p>
               </div>
               {voiceState.voiceEnabled && (
@@ -79,11 +98,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             </div>
             <div className="flex items-center space-x-8">
               <div className="text-center">
-                <div className="text-2xl font-bold">{questionsAsked}</div>
+                <div className="font-display text-2xl font-bold">{questionsAsked}</div>
                 <div className="text-sm text-white/80">Questions</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold">{20 - questionsAsked}</div>
+                <div className="font-display text-2xl font-bold">{20 - questionsAsked}</div>
                 <div className="text-sm text-white/80">Remaining</div>
               </div>
               <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
@@ -96,42 +115,48 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         {/* Chat Messages */}
         <div className="h-96 overflow-y-auto p-6 bg-gradient-to-b from-gray-50 to-white">
           <div className="space-y-4">
-            {gameMessages.map((msg) => (
-              <div key={msg.id} className="group">
-                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="bg-purple-primary/10 p-2 rounded-full">
-                        <User className="w-4 h-4 text-purple-primary" />
-                      </div>
-                      <div>
-                        <span className="font-semibold text-gray-800">{msg.user}</span>
-                        <div className="text-xs text-gray-500">{msg.timestamp}</div>
-                      </div>
-                      {msg.hasAudio && (
-                        <button className="text-blue-500 hover:text-blue-600 p-1 rounded-full hover:bg-blue-50 transition-colors">
-                          <Volume2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                    <div className="bg-gray-100 px-3 py-1 rounded-full">
-                      <span className="text-xs text-gray-600 font-medium">#{msg.id}</span>
-                    </div>
-                  </div>
-                  <div className="text-gray-800 mb-3 text-lg">{msg.message}</div>
-                  {msg.answer && (
-                    <div className="bg-gradient-to-r from-success-green/10 to-success-green/20 p-4 rounded-xl border-l-4 border-success-green">
-                      <div className="flex items-center space-x-2">
-                        <div className="bg-success-green/30 p-1 rounded-full">
-                          <Target className="w-4 h-4 text-success-green" />
+            {gameMessages.map((msg) => {
+              const answerStyling = msg.answer ? getAnswerStyling(msg.answer) : null;
+              
+              return (
+                <div key={msg.id} className="group">
+                  <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="bg-purple-primary/10 p-2 rounded-full">
+                          <User className="w-4 h-4 text-purple-primary" />
                         </div>
-                        <span className="font-semibold text-success-green">Answer: {msg.answer}</span>
+                        <div>
+                          <span className="font-semibold text-gray-800">{msg.user}</span>
+                          <div className="text-xs text-gray-500">{msg.timestamp}</div>
+                        </div>
+                        {msg.hasAudio && (
+                          <button className="text-blue-500 hover:text-blue-600 p-1 rounded-full hover:bg-blue-50 transition-colors">
+                            <Volume2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="bg-gray-100 px-3 py-1 rounded-full">
+                        <span className="text-xs text-gray-600 font-medium">#{msg.id}</span>
                       </div>
                     </div>
-                  )}
+                    <div className="text-gray-800 mb-3 text-lg">{msg.message}</div>
+                    {msg.answer && answerStyling && (
+                      <div className={answerStyling.containerClasses}>
+                        <div className="flex items-center space-x-2">
+                          <div className={`${answerStyling.iconBgClasses} p-1 rounded-full`}>
+                            <Target className={`w-4 h-4 ${answerStyling.textClasses}`} />
+                          </div>
+                          <span className={`font-semibold ${answerStyling.textClasses}`}>
+                            Answer: {msg.answer}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

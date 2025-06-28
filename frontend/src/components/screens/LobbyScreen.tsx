@@ -23,7 +23,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   <div className="max-w-6xl mx-auto p-6">
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <Card className="p-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+        <h2 className="font-display text-2xl font-bold text-gray-800 mb-6 flex items-center">
           <div className="bg-purple-primary/10 p-2 rounded-xl mr-3">
             <Gamepad2 className="w-6 h-6 text-purple-primary" />
           </div>
@@ -40,7 +40,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
       </Card>
 
       <Card className="p-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+        <h2 className="font-display text-2xl font-bold text-gray-800 mb-6 flex items-center">
           <div className="bg-success-green/20 p-2 rounded-xl mr-3">
             <Users className="w-6 h-6 text-success-green" />
           </div>
