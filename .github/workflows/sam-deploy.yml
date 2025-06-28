@@ -28,6 +28,19 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Verify environment variables
+        run: |
+          echo "Verifying required environment variables..."
+          if [ -z "${{ secrets.SUPABASE_URL }}" ]; then echo "ERROR: SUPABASE_URL is not set"; exit 1; fi
+          if [ -z "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ]; then echo "ERROR: SUPABASE_SERVICE_ROLE_KEY is not set"; exit 1; fi
+          if [ -z "${{ secrets.SUPABASE_ANON_KEY }}" ]; then echo "ERROR: SUPABASE_ANON_KEY is not set"; exit 1; fi
+          if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then echo "ERROR: OPENAI_API_KEY is not set"; exit 1; fi
+          if [ -z "${{ secrets.ELEVENLABS_API_KEY }}" ]; then echo "ERROR: ELEVENLABS_API_KEY is not set"; exit 1; fi
+          if [ -z "${{ env.ELEVENLABS_VOICE_ID }}" ]; then echo "ERROR: ELEVENLABS_VOICE_ID is not set"; exit 1; fi
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then echo "ERROR: AWS_ACCESS_KEY_ID is not set"; exit 1; fi
+          if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then echo "ERROR: AWS_SECRET_ACCESS_KEY is not set"; exit 1; fi
+          echo "✅ All required environment variables are set"
+
       - name: Install dependencies
         run: |
           pip install aws-sam-cli pytest
