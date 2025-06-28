@@ -1,84 +1,100 @@
+# 20Q Game API - Serverless Framework Configuration
+# This file configures the deployment of the FastAPI backend to AWS Lambda
 service: 20q-game-api
 
+# Serverless Framework version compatibility
 frameworkVersion: '3'
 
+# AWS provider configuration
 provider:
   name: aws
-  runtime: python3.11
-  region: us-east-1
-  stage: ${opt:stage, 'dev'}
+  runtime: python3.11  # Python runtime for Lambda
+  region: us-east-1    # AWS region for deployment
+  stage: ${opt:stage, 'dev'}  # Deployment stage (dev/staging/prod)
+  
+  # Environment variables passed to Lambda function
   environment:
-    # Supabase configuration
+    # Supabase configuration - Database and authentication
     SUPABASE_URL: ${env:SUPABASE_URL}
     SUPABASE_KEY: ${env:SUPABASE_KEY}
     SUPABASE_ANON_KEY: ${env:SUPABASE_ANON_KEY}
     SUPABASE_SERVICE_ROLE_KEY: ${env:SUPABASE_SERVICE_ROLE_KEY}
     
-    # OpenAI configuration
+    # OpenAI configuration - AI question answering
     OPENAI_API_KEY: ${env:OPENAI_API_KEY}
     
-    # ElevenLabs configuration
+    # ElevenLabs configuration - Text-to-speech functionality
     ELEVENLABS_API_KEY: ${env:ELEVENLABS_API_KEY}
     ELEVENLABS_VOICE_ID: ${env:ELEVENLABS_VOICE_ID, 'pNInz6obpgDQGcFmaJgB'}
+  
+  # IAM role permissions for Lambda function
+  iam:
+    role:
+      statements:
+        # CloudWatch Logs permissions for function logging
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: "*"
 
+# Serverless plugins for enhanced functionality
 plugins:
-  - serverless-python-requirements
+  - serverless-python-requirements  # Handles Python dependencies
 
+# Custom configuration for plugins
 custom:
   pythonRequirements:
-    dockerizePip: non-linux
+    dockerizePip: non-linux  # Use Docker for dependency packaging on non-Linux systems
     layer:
-      name: python-deps
+      name: python-deps      # Name of the Lambda layer containing dependencies
       description: Python dependencies for 20Q Game API
+    # Exclude development dependencies from deployment
     noDeploy:
-      - coverage
-      - pytest
-      - pytest-cov
-      - black
-      - flake8
-      - mypy
+      - coverage    # Test coverage tool
+      - pytest      # Testing framework
+      - pytest-cov  # Coverage plugin
+      - black       # Code formatter
+      - flake8      # Linter
+      - mypy        # Type checker
 
+# Lambda function definitions
 functions:
+  # Main API function - handles all HTTP requests
   api:
-    handler: app.handler
+    handler: app.handler  # Entry point: app.py -> handler function
     events:
+      # HTTP API Gateway integration - routes all requests to this function
       - httpApi:
-          path: /{proxy+}
-          method: ANY
-    timeout: 30
-    memorySize: 512
+          path: /{proxy+}  # Catch-all path for all API routes
+          method: ANY      # Handle all HTTP methods (GET, POST, PUT, DELETE, etc.)
+    timeout: 30           # Function timeout in seconds
+    memorySize: 512       # Memory allocation in MB
     environment:
-      # Add any function-specific environment variables here
-      PYTHONPATH: /opt/python
+      # Function-specific environment variables
+      PYTHONPATH: /opt/python  # Python path for Lambda layers
 
+# Package configuration - controls what gets deployed
 package:
   patterns:
-    - '!node_modules/**'
-    - '!tests/**'
-    - '!htmlcov/**'
-    - '!__pycache__/**'
-    - '!*.pyc'
-    - '!.pytest_cache/**'
-    - '!.coverage'
-    - '!*.log'
-    - '!.env*'
-    - '!.git/**'
-    - '!.vscode/**'
-    - '!.idea/**'
-    - '!*.md'
-    - '!requirements-dev.txt'
-    - '!pytest.ini'
-    - '!setup.py'
-    - '!MANIFEST.in'
-    - '!LICENSE'
-    - '!README.md'
-
-iam:
-  role:
-    statements:
-      - Effect: Allow
-        Action:
-          - logs:CreateLogGroup
-          - logs:CreateLogStream
-          - logs:PutLogEvents
-        Resource: "*" 
+    # Exclude unnecessary files and directories from deployment
+    - '!node_modules/**'      # Node.js dependencies (not needed for Python)
+    - '!tests/**'             # Test files
+    - '!htmlcov/**'           # Coverage reports
+    - '!__pycache__/**'       # Python cache files
+    - '!*.pyc'                # Compiled Python files
+    - '!.pytest_cache/**'     # Pytest cache
+    - '!.coverage'            # Coverage data
+    - '!*.log'                # Log files
+    - '!.env*'                # Environment files
+    - '!.git/**'              # Git repository data
+    - '!.vscode/**'           # VS Code settings
+    - '!.idea/**'             # IntelliJ IDEA settings
+    - '!*.md'                 # Documentation files
+    - '!requirements-dev.txt' # Development requirements
+    - '!pytest.ini'          # Pytest configuration
+    - '!setup.py'            # Setup script
+    - '!MANIFEST.in'         # Manifest file
+    - '!LICENSE'             # License file
+    - '!README.md'           # README file 
