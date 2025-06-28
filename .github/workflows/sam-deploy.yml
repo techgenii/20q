@@ -1,4 +1,4 @@
-name: Deploy SAM App
+name: Deploy Whisper Chase SAM App
 
 on:
   push:
@@ -11,6 +11,7 @@ jobs:
     env:
       AWS_REGION: us-west-2
       PYTHON_VERSION: '3.13'
+      STACK_NAME: 'whisprechase'
       ELEVENLABS_VOICE_ID: '9BWtsMINqrJLrRacOk9x'
 
     steps:
@@ -60,21 +61,10 @@ jobs:
           ELEVENLABS_VOICE_ID: ${{ env.ELEVENLABS_VOICE_ID }}
 
       - name: Build SAM app
-        run: |
-          sam build
+        run: sam build
 
       - name: Validate SAM template
-        run: |
-          sam validate --region ${{ env.AWS_REGION }}
-
-      - name: Debug SAM config
-        run: |
-          echo "Current directory:"
-          pwd
-          echo "Files in current directory:"
-          ls -la
-          echo "Content of samconfig.yaml:"
-          cat samconfig.yaml
+        run: sam validate --region ${{ env.AWS_REGION }}
 
       - name: Deploy SAM app
         env:
@@ -85,43 +75,22 @@ jobs:
           ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
           ELEVENLABS_VOICE_ID: ${{ env.ELEVENLABS_VOICE_ID }}
         run: |
-          echo "Debug: Checking samconfig.yaml exists and is readable"
-          ls -la samconfig.yaml
-          echo "Debug: Current working directory"
-          pwd
-          echo "Debug: Environment variables for SAM"
-          echo "SUPABASE_URL is set: $([ -n "$SUPABASE_URL" ] && echo "yes" || echo "no")"
-
-          echo "Attempting deployment with YAML config file..."
-          sam deploy --config-file samconfig.yaml --config-env default --resolve-s3 \
+          sam deploy \
+            --config-file samconfig.yaml \
+            --config-env default \
             --parameter-overrides \
               SUPABASE_URL="$SUPABASE_URL" \
               SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY" \
               SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
               OPENAI_API_KEY="$OPENAI_API_KEY" \
               ELEVENLABS_API_KEY="$ELEVENLABS_API_KEY" \
-              ELEVENLABS_VOICE_ID="$ELEVENLABS_VOICE_ID" || {
-            echo "Config file approach failed, falling back to explicit parameters..."
-            sam deploy \
-              --no-confirm-changeset \
-              --no-fail-on-empty-changeset \
-              --stack-name 20q-fastapi-lambda \
-              --capabilities CAPABILITY_IAM \
-              --region us-west-2 \
-              --resolve-s3 \
-              --parameter-overrides \
-                ParameterKey=SUPABASE_URL,ParameterValue="$SUPABASE_URL" \
-                ParameterKey=SUPABASE_SERVICE_ROLE_KEY,ParameterValue="$SUPABASE_SERVICE_ROLE_KEY" \
-                ParameterKey=SUPABASE_ANON_KEY,ParameterValue="$SUPABASE_ANON_KEY" \
-                ParameterKey=OPENAI_API_KEY,ParameterValue="$OPENAI_API_KEY" \
-                ParameterKey=ELEVENLABS_API_KEY,ParameterValue="$ELEVENLABS_API_KEY" \
-                ParameterKey=ELEVENLABS_VOICE_ID,ParameterValue="$ELEVENLABS_VOICE_ID"
-          }
+              ELEVENLABS_VOICE_ID="$ELEVENLABS_VOICE_ID"
 
       - name: Stream Lambda logs after deployment
+        if: success()
         run: |
           sam logs \
-            --stack-name 20q-fastapi-lambda \
+            --stack-name ${{ env.STACK_NAME }} \
             --tail \
             --region ${{ env.AWS_REGION }} \
             --name WhisperChaseFunction

@@ -1,9 +1,8 @@
-
 version: 0.1
 default:
   global:
     parameters:
-      stack_name: "20q-fastapi-lambda"
+      stack_name: "whisprechase"
       region: "us-west-2"
       confirm_changeset: false
       fail_on_empty_changeset: false
@@ -15,11 +14,11 @@ default:
       parallel: true
   deploy:
     parameters:
-      stack_name: "20q-fastapi-lambda"
+      stack_name: "whisprechase"
       region: "us-west-2"
       confirm_changeset: false
       fail_on_empty_changeset: false
       capabilities: "CAPABILITY_IAM"
       disable_rollback: false
       resolve_s3: true
-      # Note: parameter_overrides removed from config - passed via command line instead
+      parameter_overrides: "ParameterKey=SUPABASE_URL,ParameterValue="$SUPABASE_URL" ParameterKey=ELEVENLABS_VOICE_ID,ParameterValue=9BWtsMINqrJLrRacOk9x"
