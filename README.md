@@ -1,172 +1,183 @@
-# Whisper Chase: 20 Questions - Multi Player Game
+# 20Q Game
 
-[![Built with Bolt](https://img.shields.io/badge/Built%20with-Bolt-blue?style=flat-square)](https://bolt.new)
-[![Netlify Status](https://api.netlify.com/api/v1/badges/5c35e962-3483-496c-b3ae-1e6cc7019008/deploy-status)](https://app.netlify.com/projects/startling-beijinho-0245f3/deploys)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![TypeScript](https://img.shields.io/badge/typescript-4.0+-blue.svg)](https://www.typescriptlang.org/)
+A modern implementation of the classic 20 Questions game with AI-powered responses, voice features, and multiplayer support.
 
-Whisper Chase: 20 Questions is a multiplayer guessing game where you and others team up—or compete—against an AI to uncover a secret word in 20 questions or less. With each round, the challenge grows, making every guess count as the mystery word gets trickier to crack.
+## Features
 
-## 🎮 Features
+- 🤖 AI-powered question answering using OpenAI
+- 🎤 Text-to-speech using ElevenLabs
+- 👥 Multiplayer support with real-time game state
+- 🔐 User authentication with Supabase
+- 🏆 Leaderboards and achievements
+- 📱 Responsive web interface with modern UI components
+- ☁️ Serverless deployment on AWS Lambda
 
-- **Multiplayer Support**: Play Whisper Chase with friends in real-time
-- **Intelligent AI**: AI-powered question suggestions and object recognition
-- **Voice Features**: Text-to-speech and speech-to-text powered by ElevenLabs
-- **Web Interface**: Clean, responsive web UI built with modern technologies
-- **Real-time Communication**: Live game updates and chat functionality
-- **Question History**: Track questions and answers throughout the game
-- **Scoring System**: Points-based gameplay with leaderboards
+## Tech Stack
 
-## 🚀 Quick Start
+### Backend
+- **Framework**: FastAPI
+- **Runtime**: Python 3.11
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Supabase Auth
+- **AI**: OpenAI API
+- **TTS**: ElevenLabs API
+- **Deployment**: AWS Lambda + Serverless Framework
 
-### Prerequisites
+### Frontend
+- **Framework**: React 18 + TypeScript
+- **Build Tool**: Vite
+- **UI Framework**: Bolt.new + shadcn/ui
+- **Styling**: Tailwind CSS
+- **Icons**: Lucide React
+- **State Management**: React Hooks
+- **Component Library**: shadcn/ui (New York style)
 
-- Python 3.13 or higher
-- Node.js 20 or higher
-- npm or yarn
-- Supabase account and project
-- ElevenLabs Account
+## Prerequisites
 
-### Installation
+- Python 3.11 or higher
+- Node.js 18 or higher
+- AWS CLI (for deployment)
+- Supabase account
+- OpenAI API key
+- ElevenLabs API key
+
+## Quick Start
+
+### Backend Setup
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/techgenii/20q.git
+   git clone <repository-url>
    cd 20q
    ```
 
-2. **Set up Supabase**
-   ```bash
-   # Configure your Supabase project
-   # Add your Supabase URL and API key to environment variables
-   ```
-
-3. **Install Python dependencies**
+2. **Set up Python environment**
    ```bash
    cd backend
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    pip install -r requirements.txt
+   pip install -r ../dev-requirements.txt
    ```
 
-4. **Install Node.js dependencies**
+3. **Configure environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys and Supabase credentials
+   ```
+
+4. **Run the development server**
+   ```bash
+   uvicorn app:app --reload
+   ```
+
+### Frontend Setup
+
+1. **Install dependencies**
    ```bash
    cd frontend
    npm install
    ```
 
-5. **Run database migrations**
+2. **Start development server**
    ```bash
-   # Apply Supabase migrations
-   supabase db push
-   ```
-
-6. **Start the development servers**
-   ```bash
-   # Start the backend server (from backend directory)
-   python main.py
-   
-   # In another terminal, start the frontend (from frontend directory)
    npm run dev
    ```
 
-7. **Open your browser**
-   ```
-   Navigate to http://localhost:3000
-   ```
+## Environment Variables
 
-## 🎯 How to Play
-
-1. **Create or Join a Game**: Start a new game or join an existing room in Whisper Chase
-2. **Think of an Object**: Ths AI thinks of any object, person, or concept
-3. **Ask Questions**: Other players take turns asking yes/no questions
-4. **Make Guesses**: Try to guess the object within 20 questions
-5. **Score Points**: Earn points for correct guesses and clever questions
-
-## 🛠️ Technology Stack
-
-- **Backend**: Python with modern web framework
-- **Frontend**: TypeScript/JavaScript with modern web frameworks
-- **Database**: Supabase (PostgreSQL) for real-time data and authentication
-- **Real-time**: Supabase real-time subscriptions for live gameplay
-- **Voice Features**: ElevenLabs API for text-to-speech and speech-to-text
-- **Testing**: pytest for backend testing
-- **Development**: VS Code configuration included
-
-## 📁 Project Structure
-
-```
-WhisperChase/
-├── backend/          # Python backend server
-│   ├── data/         # Game data and assets
-│   ├── tests/        # Backend test files
-│   └── __pycache__/  # Python cache files
-├── frontend/         # TypeScript/JavaScript frontend
-│   ├── src/          # Source code
-│   └── node_modules/ # Node.js dependencies
-├── supabase/         # Supabase configuration
-│   └── migrations/   # Database migration files
-├── htmlcov/          # Coverage reports
-└── .vscode/          # VS Code configuration
+### Backend (.env)
+```env
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+SUPABASE_ANON_KEY=your_anon_key
+OPENAI_API_KEY=your_openai_key
+ELEVENLABS_API_KEY=your_elevenlabs_key
 ```
 
-## 🎲 Game Rules
+### Frontend (.env)
+```env
+VITE_API_URL=http://localhost:8000
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_anon_key
+```
 
-- Players have up to 20 yes/no questions to guess the object
-- Questions and guesses can be made via chat or voice—both are supported throughout the game
-- Questions should be answerable with "Yes", "No", or "Sometimes/Maybe"
-- The AI is the thinking player and should answer honestly
-- Guessing the object correctly within 20 questions wins the round
-- Points are awarded based on efficiency and creativity
+## Testing
 
-## 🧪 Testing
-
-Run the backend tests:
-
+### Backend Tests
 ```bash
 cd backend
-pytest
+python -m pytest tests/ -v
 ```
 
-View test coverage:
+### Frontend Tests
 ```bash
-# Generate coverage report
-pytest --cov=. --cov-report=html
-# Open htmlcov/index.html in your browser
+cd frontend
+npm test
 ```
 
-## 🤝 Contributing
+## Deployment
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+### Backend (AWS Lambda)
+```bash
+cd backend
+npx serverless deploy --stage prod
+```
+
+### Frontend (Vercel/Netlify)
+```bash
+cd frontend
+npm run build
+# Deploy the dist/ folder to your hosting provider
+```
+
+## API Documentation
+
+Once the backend is running, visit:
+- **Interactive API docs**: http://localhost:8000/docs
+- **ReDoc documentation**: http://localhost:8000/redoc
+
+## Frontend Architecture
+
+The frontend is built with **Bolt.new**, a modern React starter that includes:
+
+- **shadcn/ui**: High-quality, accessible UI components
+- **Tailwind CSS**: Utility-first CSS framework
+- **TypeScript**: Type-safe JavaScript
+- **Vite**: Fast build tool and dev server
+- **Lucide React**: Beautiful, customizable icons
+
+### Component Structure
+```
+frontend/src/
+├── components/
+│   ├── ui/          # shadcn/ui components
+│   ├── auth/        # Authentication components
+│   ├── navigation/  # Navigation components
+│   ├── screens/     # Page components
+│   └── voice/       # Voice-related components
+├── hooks/           # Custom React hooks
+├── lib/             # Utility functions
+└── types/           # TypeScript type definitions
+```
+
+## Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
 
-## 📝 License
+## License
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
 
-## 🔗 Links
+## Acknowledgments
 
-- [Live Demo](https://startling-beijinho-0245f3.netlify.app) *(if available)*
-- [Documentation](https://github.com/techgenii/20q/wiki)
-- [Report Issues](https://github.com/techgenii/20q/issues)
-- [Discussions](https://github.com/techgenii/20q/discussions)
-
-## 🙏 Acknowledgments
-
-- Classic 20 Questions game inspiration
-- Open source community for tools and libraries
-- Contributors and testers
-
-## 📊 Stats
-
-![GitHub last commit](https://img.shields.io/github/last-commit/techgenii/20q)
-![GitHub issues](https://img.shields.io/github/issues/techgenii/20q)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/techgenii/20q)
-
----
-
-**Made with ❤️ by [TechGenii](https://github.com/techgenii)**
+- **Bolt.new** for the modern React starter template
+- **shadcn/ui** for the beautiful UI components
+- OpenAI for AI capabilities
+- ElevenLabs for text-to-speech
+- Supabase for backend-as-a-service
+- FastAPI for the web framework
