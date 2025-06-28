@@ -32,7 +32,6 @@ Resources:
         AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS,HEAD,PATCH'"
         AllowHeaders: "'*'"
         AllowOrigin: "'*'"
-        AllowCredentials: "'true'"
         MaxAge: "'86400'"
 
   # Lambda Function
@@ -54,12 +53,26 @@ Resources:
           ELEVENLABS_API_KEY: !Ref ELEVENLABSAPIKEY
           ELEVENLABS_VOICE_ID: !Ref ELEVENLABSVOICEID
       Events:
-        Api:
+        RootApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WhisperChaseApi
+            Path: /
+            Method: ANY
+                RootApi:
+        DocsApi:
+          Type: Api
+            Properties:
+              RestApiId: !Ref WhisperChaseApi
+              Path: /docs
+              Method: ANY
+        ProxyApi:
           Type: Api
           Properties:
             RestApiId: !Ref WhisperChaseApi
             Path: /{proxy+}
             Method: ANY
+
 
 Outputs:
   WhisperChaseApi:

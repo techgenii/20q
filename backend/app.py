@@ -647,4 +647,5 @@ async def update_game_voice_settings(
 @app.get("/")
 async def root():
     return {"message": "20Q Game API with Authentication is running"}
+
 handler = Mangum(app)
