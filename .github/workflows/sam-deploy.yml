@@ -34,6 +34,7 @@ jobs:
 
       - name: Run tests
         run: |
+          cd backend
           pytest tests/
 
       - name: Build SAM app
