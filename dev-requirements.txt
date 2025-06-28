@@ -4,6 +4,11 @@
 # Testing
 pytest
 pytest-mock
+pytest-asyncio
+pytest-cov
+
+# HTTP Testing (useful for FastAPI testing)
+httpx
 
 # Linting & Formatting
 flake8
@@ -13,5 +18,5 @@ black
 mypy
 types-requests
 
-# Optional: Test coverage
-pytest-cov
+# Development Tools
+pre-commit  # Optional: for git hooks
