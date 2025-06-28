@@ -59,13 +59,12 @@ Resources:
             RestApiId: !Ref WhisperChaseApi
             Path: /
             Method: ANY
-                RootApi:
         DocsApi:
           Type: Api
-            Properties:
-              RestApiId: !Ref WhisperChaseApi
-              Path: /docs
-              Method: ANY
+          Properties:
+            RestApiId: !Ref WhisperChaseApi
+            Path: /docs
+            Method: ANY
         ProxyApi:
           Type: Api
           Properties:
