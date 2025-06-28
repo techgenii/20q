@@ -23,6 +23,7 @@ import requests
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 from pydantic import BaseModel, EmailStr
 
@@ -44,6 +45,15 @@ import os
 # Use root_path only in production (AWS Lambda)
 root_path = "/Prod" if os.getenv("AWS_LAMBDA_FUNCTION_NAME") else ""
 app = FastAPI(title="Whisper Chase: 20 Questions", root_path=root_path)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure this properly for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Security
 security = HTTPBearer()
