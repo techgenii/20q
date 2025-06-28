@@ -73,8 +73,8 @@ jobs:
           pwd
           echo "Files in current directory:"
           ls -la
-          echo "Content of samconfig.toml:"
-          cat samconfig.toml
+          echo "Content of samconfig.yaml:"
+          cat samconfig.yaml
 
       - name: Deploy SAM app
         env:
