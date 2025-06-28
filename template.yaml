@@ -2,6 +2,12 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: 20Q FastAPI Lambda (us-west-2)
 
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+
 Parameters:
   SUPABASE_URL:
     Type: String
@@ -17,6 +23,29 @@ Parameters:
     Type: String
 
 Resources:
+  # API Gateway with Authentication
+  WhisperChaseApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        ApiKeyRequired: true
+        UsagePlan:
+          CreateUsagePlan: PER_API
+          Description: Usage plan for WhisperChase API
+          UsagePlanName: WhisperChaseUsagePlan
+          Quota:
+            Limit: 10000
+            Period: DAY
+          Throttle:
+            BurstLimit: 200
+            RateLimit: 100
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+
+  # Lambda Function
   WhisperChaseFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -38,5 +67,47 @@ Resources:
         Api:
           Type: Api
           Properties:
+            RestApiId: !Ref WhisperChaseApi
             Path: /{proxy+}
-            Method: ANY 
+            Method: ANY
+
+  # API Key
+  WhisperChaseApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Name: WhisperChaseApiKey
+      Description: API Key for WhisperChase application
+      Enabled: true
+      StageKeys:
+        - RestApiId: !Ref WhisperChaseApi
+          StageName: Prod
+    DependsOn:
+      - WhisperChaseApiProdStage
+
+  # Usage Plan Key (connects API Key to Usage Plan)
+  WhisperChaseUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref WhisperChaseApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref WhisperChaseApiUsagePlan
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  WhisperChaseApi:
+    Description: "API Gateway endpoint URL for Prod stage for WhisperChase function"
+    Value: !Sub "https://${WhisperChaseApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  WhisperChaseFunction:
+    Description: "WhisperChase Lambda Function ARN"
+    Value: !GetAtt WhisperChaseFunction.Arn
+  WhisperChaseFunctionIamRole:
+    Description: "Implicit IAM Role created for WhisperChase function"
+    Value: !GetAtt WhisperChaseFunctionRole.Arn
+  ApiKeyId:
+    Description: "API Key ID for accessing the API"
+    Value: !Ref WhisperChaseApiKey
+  UsagePlanId:
+    Description: "Usage Plan ID"
+    Value: !Ref WhisperChaseApiUsagePlan
