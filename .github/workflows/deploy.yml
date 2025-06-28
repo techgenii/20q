@@ -101,13 +101,37 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
+    - name: Install system dependencies
+      run: |
+        # Install system dependencies needed for building wheels
+        sudo apt-get update
+        sudo apt-get install -y build-essential python3-dev
+
     - name: Install Python dependencies
       run: |
-        python -m pip install --upgrade pip
-        # Install pre-built wheels to avoid compilation issues
-        pip install --only-binary=all pydantic-core
-        pip install -r requirements.txt
-        pip install -r ../dev-requirements.txt
+        python -m pip install --upgrade pip setuptools wheel
+        # Copy pip configuration to prefer pre-built wheels
+        cp backend/pip.conf ~/.pip/pip.conf || mkdir -p ~/.pip && cp backend/pip.conf ~/.pip/pip.conf
+        
+        # Try multiple installation strategies
+        echo "Attempting to install dependencies..."
+        
+        # Strategy 1: Normal installation
+        if pip install -r requirements.txt; then
+          echo "Requirements installed successfully"
+        else
+          echo "Normal installation failed, trying with --only-binary=all"
+          # Strategy 2: Force pre-built wheels
+          pip install --only-binary=all -r requirements.txt || {
+            echo "Binary-only installation failed, trying individual packages"
+            # Strategy 3: Install packages individually
+            pip install --only-binary=all fastapi uvicorn mangum supabase openai requests python-multipart
+            pip install --only-binary=all "pydantic[email]>=2.7.0"
+          }
+        fi
+        
+        # Install dev requirements
+        pip install -r ../dev-requirements.txt || pip install --only-binary=all -r ../dev-requirements.txt
 
     - name: Run tests
       run: |

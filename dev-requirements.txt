@@ -2,21 +2,21 @@
 -r requirements.txt
 
 # Testing
-pytest
-pytest-mock
-pytest-asyncio
-pytest-cov
+pytest==8.0.0
+pytest-mock==3.12.0
+pytest-asyncio==0.23.5
+pytest-cov==4.1.0
 
 # HTTP Testing (useful for FastAPI testing)
-httpx
+httpx==0.26.0
 
 # Linting & Formatting
-flake8
-black
+flake8==7.0.0
+black==24.1.1
 
 # Type Checking
-mypy
-types-requests
+mypy==1.8.0
+types-requests==2.31.0.20240311
 
 # Development Tools
 pre-commit  # Optional: for git hooks
