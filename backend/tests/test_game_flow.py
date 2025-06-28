@@ -22,7 +22,8 @@ import backend.game_logic as game_logic
 @pytest.fixture(autouse=True)
 def patch_supabase_and_openai(monkeypatch):
     # Patch supabase client methods
-    monkeypatch.setattr(game_logic, "supabase", MagicMock())
+    mock_supabase = MagicMock()
+    monkeypatch.setattr(game_logic, "get_supabase_client", lambda: mock_supabase)
     # Patch OpenAI
     monkeypatch.setattr(game_logic.openai.ChatCompletion, "create", MagicMock(return_value=MagicMock(
         choices=[MagicMock(message=MagicMock(content="Yes"))]
@@ -46,7 +47,9 @@ def test_start_game_inserts_game(monkeypatch):
     mock_response = MagicMock()
     mock_response.error = None
     mock_response.data = [{"id": "game-uuid", "host_player_id": "host", "secret_word": "test", "status": "playing", "questions_asked": 0, "current_player_id": "host"}]
-    game_logic.supabase.table.return_value.insert.return_value.execute.return_value = mock_response
+    mock_supabase = MagicMock()
+    mock_supabase.table.return_value.insert.return_value.execute.return_value = mock_response
+    monkeypatch.setattr(game_logic, "get_supabase_client", lambda: mock_supabase)
 
     result = game_logic.start_game("host", 1)
     assert result["id"] == "game-uuid"
@@ -75,7 +78,9 @@ def test_make_guess_incorrect(monkeypatch):
 def test_join_game_success(monkeypatch):
     mock_response = MagicMock()
     mock_response.data = [{"game_id": "game-uuid", "player_id": "player-uuid"}]
-    game_logic.supabase.table.return_value.insert.return_value.execute.return_value = mock_response
+    mock_supabase = MagicMock()
+    mock_supabase.table.return_value.insert.return_value.execute.return_value = mock_response
+    monkeypatch.setattr(game_logic, "get_supabase_client", lambda: mock_supabase)
     result = game_logic.join_game("game-uuid", "player-uuid")
     assert result["game_id"] == "game-uuid"
     assert result["player_id"] == "player-uuid"
@@ -83,14 +88,18 @@ def test_join_game_success(monkeypatch):
 def test_join_game_failure(monkeypatch):
     mock_response = MagicMock()
     mock_response.data = None
-    game_logic.supabase.table.return_value.insert.return_value.execute.return_value = mock_response
+    mock_supabase = MagicMock()
+    mock_supabase.table.return_value.insert.return_value.execute.return_value = mock_response
+    monkeypatch.setattr(game_logic, "get_supabase_client", lambda: mock_supabase)
     with pytest.raises(Exception):
         game_logic.join_game("game-uuid", "player-uuid")
 
 def test_record_question_success(monkeypatch):
     mock_response = MagicMock()
     mock_response.data = [{"id": 1, "game_id": "game-uuid", "player_id": "player-uuid", "question": "Q", "answer": True, "question_number": 1}]
-    game_logic.supabase.table.return_value.insert.return_value.execute.return_value = mock_response
+    mock_supabase = MagicMock()
+    mock_supabase.table.return_value.insert.return_value.execute.return_value = mock_response
+    monkeypatch.setattr(game_logic, "get_supabase_client", lambda: mock_supabase)
     result = game_logic.record_question("game-uuid", "player-uuid", "Q", "Yes", 1)
     assert result["game_id"] == "game-uuid"
     assert result["player_id"] == "player-uuid"
@@ -98,7 +107,9 @@ def test_record_question_success(monkeypatch):
 def test_record_question_failure(monkeypatch):
     mock_response = MagicMock()
     mock_response.data = None
-    game_logic.supabase.table.return_value.insert.return_value.execute.return_value = mock_response
+    mock_supabase = MagicMock()
+    mock_supabase.table.return_value.insert.return_value.execute.return_value = mock_response
+    monkeypatch.setattr(game_logic, "get_supabase_client", lambda: mock_supabase)
     with pytest.raises(Exception):
         game_logic.record_question("game-uuid", "player-uuid", "Q", "Yes", 1)
 
@@ -106,7 +117,9 @@ def test_increment_questions_asked_success(monkeypatch):
     monkeypatch.setattr(game_logic, "get_game", lambda game_id: {"questions_asked": 1})
     mock_response = MagicMock()
     mock_response.data = [{"id": "game-uuid", "questions_asked": 2}]
-    game_logic.supabase.table.return_value.update.return_value.eq.return_value.execute.return_value = mock_response
+    mock_supabase = MagicMock()
+    mock_supabase.table.return_value.update.return_value.eq.return_value.execute.return_value = mock_response
+    monkeypatch.setattr(game_logic, "get_supabase_client", lambda: mock_supabase)
     result = game_logic.increment_questions_asked("game-uuid")
     assert result == 2
 
@@ -114,7 +127,9 @@ def test_increment_questions_asked_failure(monkeypatch):
     monkeypatch.setattr(game_logic, "get_game", lambda game_id: {"questions_asked": 1})
     mock_response = MagicMock()
     mock_response.data = None
-    game_logic.supabase.table.return_value.update.return_value.eq.return_value.execute.return_value = mock_response
+    mock_supabase = MagicMock()
+    mock_supabase.table.return_value.update.return_value.eq.return_value.execute.return_value = mock_response
+    monkeypatch.setattr(game_logic, "get_supabase_client", lambda: mock_supabase)
     with pytest.raises(Exception):
         game_logic.increment_questions_asked("game-uuid")
 
@@ -127,7 +142,9 @@ def test_get_game_audio_settings(monkeypatch):
 def test_update_game_tts_settings(monkeypatch):
     mock_response = MagicMock()
     mock_response.data = [{"id": "game-uuid", "enable_tts": True, "voice_id": "voice-123"}]
-    game_logic.supabase.table.return_value.update.return_value.eq.return_value.execute.return_value = mock_response
+    mock_supabase = MagicMock()
+    mock_supabase.table.return_value.update.return_value.eq.return_value.execute.return_value = mock_response
+    monkeypatch.setattr(game_logic, "get_supabase_client", lambda: mock_supabase)
     result = game_logic.update_game_tts_settings("game-uuid", enable_tts=True, voice_id="voice-123")
     assert result["enable_tts"] is True
     assert result["voice_id"] == "voice-123"
@@ -135,28 +152,36 @@ def test_update_game_tts_settings(monkeypatch):
 def test_get_or_create_player_stats(monkeypatch):
     mock_response = MagicMock()
     mock_response.data = [{"player_id": "player-uuid", "games_played": 1}]
-    game_logic.supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_response
+    mock_supabase = MagicMock()
+    mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_response
+    monkeypatch.setattr(game_logic, "get_supabase_client", lambda: mock_supabase)
     result = game_logic.get_or_create_player_stats("player-uuid")
     assert result["player_id"] == "player-uuid"
 
 def test_get_or_create_player_stats_default(monkeypatch):
     mock_response = MagicMock()
     mock_response.data = []
-    game_logic.supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_response
+    mock_supabase = MagicMock()
+    mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_response
+    monkeypatch.setattr(game_logic, "get_supabase_client", lambda: mock_supabase)
     result = game_logic.get_or_create_player_stats("player-uuid")
     assert result["games_played"] == 0
 
 def test_get_or_create_player_stats_difficulty(monkeypatch):
     mock_response = MagicMock()
     mock_response.data = [{"player_id": "player-uuid", "difficulty": 1, "games_played": 1}]
-    game_logic.supabase.table.return_value.select.return_value.eq.return_value.eq.return_value.execute.return_value = mock_response
+    mock_supabase = MagicMock()
+    mock_supabase.table.return_value.select.return_value.eq.return_value.eq.return_value.execute.return_value = mock_response
+    monkeypatch.setattr(game_logic, "get_supabase_client", lambda: mock_supabase)
     result = game_logic.get_or_create_player_stats_difficulty("player-uuid", 1)
     assert result["difficulty"] == 1
 
 def test_get_or_create_player_stats_difficulty_default(monkeypatch):
     mock_response = MagicMock()
     mock_response.data = []
-    game_logic.supabase.table.return_value.select.return_value.eq.return_value.eq.return_value.execute.return_value = mock_response
+    mock_supabase = MagicMock()
+    mock_supabase.table.return_value.select.return_value.eq.return_value.eq.return_value.execute.return_value = mock_response
+    monkeypatch.setattr(game_logic, "get_supabase_client", lambda: mock_supabase)
     result = game_logic.get_or_create_player_stats_difficulty("player-uuid", 1)
     assert result["games_played"] == 0
 
@@ -171,13 +196,17 @@ def test_update_stats_data():
 def test_upsert_player_stats(monkeypatch):
     mock_response = MagicMock()
     mock_response.data = [{"player_id": "player-uuid"}]
-    game_logic.supabase.table.return_value.upsert.return_value.execute.return_value = mock_response
+    mock_supabase = MagicMock()
+    mock_supabase.table.return_value.upsert.return_value.execute.return_value = mock_response
+    monkeypatch.setattr(game_logic, "get_supabase_client", lambda: mock_supabase)
     game_logic.upsert_player_stats("player-uuid", {"player_id": "player-uuid"})
 
 def test_upsert_player_stats_difficulty(monkeypatch):
     mock_response = MagicMock()
     mock_response.data = [{"player_id": "player-uuid", "difficulty": 1}]
-    game_logic.supabase.table.return_value.upsert.return_value.execute.return_value = mock_response
+    mock_supabase = MagicMock()
+    mock_supabase.table.return_value.upsert.return_value.execute.return_value = mock_response
+    monkeypatch.setattr(game_logic, "get_supabase_client", lambda: mock_supabase)
     game_logic.upsert_player_stats_difficulty("player-uuid", 1, {"player_id": "player-uuid"})
 
 def test_generate_speech(monkeypatch):
@@ -204,7 +233,7 @@ def test_ask_question_with_tts(monkeypatch):
     monkeypatch.setattr(game_logic, "increment_questions_asked", lambda game_id: 1)
     monkeypatch.setattr(game_logic, "record_question", lambda *a, **kw: {"id": 1})
     monkeypatch.setattr(game_logic, "generate_speech", lambda *a, **kw: b"audio-bytes")
-    monkeypatch.setattr(game_logic, "supabase", MagicMock())
+    monkeypatch.setattr(game_logic, "get_supabase_client", lambda: MagicMock())
     result = game_logic.ask_question_with_tts("game-uuid", "player-uuid", "Q?")
     assert result["answer"] == "Yes"
     assert result["question_number"] == 1
@@ -221,7 +250,9 @@ def test_get_remaining_slots_with_max_players(monkeypatch):
     # Patch supabase to return 2 participants
     mock_resp = MagicMock()
     mock_resp.data = [{"player_id": "p1"}, {"player_id": "p2"}]
-    game_logic.supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_resp
+    mock_supabase = MagicMock()
+    mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_resp
+    monkeypatch.setattr(game_logic, "get_supabase_client", lambda: mock_supabase)
     slots = game_logic.get_remaining_slots("game-uuid")
     assert slots == 2
 
@@ -231,7 +262,9 @@ def test_get_remaining_slots_no_max_players(monkeypatch):
     # Patch supabase to return 0 participants
     mock_resp = MagicMock()
     mock_resp.data = []
-    game_logic.supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_resp
+    mock_supabase = MagicMock()
+    mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_resp
+    monkeypatch.setattr(game_logic, "get_supabase_client", lambda: mock_supabase)
     slots = game_logic.get_remaining_slots("game-uuid")
     assert slots == 1
 
@@ -249,7 +282,9 @@ def test_start_game_with_game_type_max_players_guessed_word(monkeypatch):
         "max_players": 2,
         "guessed_word": "cat"
     }]
-    game_logic.supabase.table.return_value.insert.return_value.execute.return_value = mock_response
+    mock_supabase = MagicMock()
+    mock_supabase.table.return_value.insert.return_value.execute.return_value = mock_response
+    monkeypatch.setattr(game_logic, "get_supabase_client", lambda: mock_supabase)
     # Patch join_game to do nothing
     monkeypatch.setattr(game_logic, "join_game", lambda game_id, player_id: None)
     result = game_logic.start_game("host", 1, game_type="solo", max_players=2, guessed_word="cat")

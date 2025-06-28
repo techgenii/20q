@@ -1,4 +1,3 @@
-
 # This file is part of 20Q.
 #
 # Copyright (C) 2025 Trailyn Ventures, LLC
@@ -18,6 +17,7 @@
 
 from supabase import create_client, Client
 import os
+from typing import Optional
 
 # Optional: use dotenv only locally
 try:
@@ -26,14 +26,39 @@ try:
 except ImportError:
     pass
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+# Global variables to store the clients
+_supabase_client: Optional[Client] = None
+_supabase_auth_client: Optional[Client] = None
 
-# Service role client for server-side operations (game logic, database operations)
-# This has full access and bypasses RLS
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+def get_supabase_client() -> Client:
+    """Get the Supabase service role client (lazy initialization)"""
+    global _supabase_client
+    if _supabase_client is None:
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        if not supabase_url or not supabase_key:
+            raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required")
+        _supabase_client = create_client(supabase_url, supabase_key)
+    return _supabase_client
 
-# Anonymous client for authentication operations
-# This respects RLS and is used for user auth
-supabase_auth: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+def get_supabase_auth_client() -> Client:
+    """Get the Supabase anonymous client (lazy initialization)"""
+    global _supabase_auth_client
+    if _supabase_auth_client is None:
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_ANON_KEY")
+        if not supabase_url or not supabase_key:
+            raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY environment variables are required")
+        _supabase_auth_client = create_client(supabase_url, supabase_key)
+    return _supabase_auth_client
+
+# Backward compatibility - create properties that access the lazy clients
+@property
+def supabase() -> Client:
+    """Service role client for server-side operations (game logic, database operations)"""
+    return get_supabase_client()
+
+@property
+def supabase_auth() -> Client:
+    """Anonymous client for authentication operations"""
+    return get_supabase_auth_client()

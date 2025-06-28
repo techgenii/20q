@@ -23,7 +23,7 @@ import base64
 import requests
 import openai
 
-from .supabase_client import supabase
+from .supabase_client import get_supabase_client
 
 # Optional: use dotenv only locally
 try:
@@ -42,7 +42,7 @@ ELEVENLABS_BASE_URL = os.getenv("ELEVENLABS_BASE_URL")
 
 # Load secret words from supabase
 def load_secret_words():
-    response = supabase.table("secret_words").select("*").execute()
+    response = get_supabase_client().table("secret_words").select("*").execute()
     if not response.data:
         raise Exception("Supabase error: No data returned from secret_words table.")
     return response.data
@@ -160,7 +160,7 @@ def start_game(host_player_id, difficulty=None, enable_tts=False, voice_id=None,
             data["max_players"] = max_players
         if guessed_word is not None:
             data["guessed_word"] = guessed_word
-        response = supabase.table("games").insert(data).execute()
+        response = get_supabase_client().table("games").insert(data).execute()
         if not response.data:
             raise Exception("Failed to start game with the given host player ID.")
         game_data = response.data[0]
@@ -185,7 +185,7 @@ def join_game(game_id, player_id):
             "game_id": game_id,
             "player_id": player_id
         }
-        response = supabase.table("game_participants").insert(data).execute()
+        response = get_supabase_client().table("game_participants").insert(data).execute()
         if not response.data:
             raise Exception("Failed to join game with the given game ID.")
         return response.data[0]
@@ -258,7 +258,7 @@ def ask_question_with_tts(game_id, player_id, question):
         # Check if game should end due to question limit
         if question_count >= 20:
             # Update game status to finished (no winner)
-            supabase.table("games").update({
+            get_supabase_client().table("games").update({
                 "status": "finished",
                 "completed_at": "now()"
             }).eq("id", game_id).execute()
@@ -287,7 +287,7 @@ def record_question(game_id, player_id, question, answer, question_number):
             "answer": True if answer_str.lower() == "yes" else False,
             "question_number": question_number
         }
-        response = supabase.table("game_questions").insert(data).execute()
+        response = get_supabase_client().table("game_questions").insert(data).execute()
         if not response.data:
             raise Exception("Failed to record question with the given game ID.")
         return response.data[0]
@@ -299,7 +299,7 @@ def record_question(game_id, player_id, question, answer, question_number):
 def get_game(game_id):
     """Retrieve game data."""
     try:
-        response = supabase.table("games").select("*").eq("id", game_id).single().execute()
+        response = get_supabase_client().table("games").select("*").eq("id", game_id).single().execute()
         if not response.data:
             raise Exception("No game found with the given ID.")
         return response.data
@@ -314,7 +314,7 @@ def increment_questions_asked(game_id):
     try:
         game = get_game(game_id)
         new_count = (game["questions_asked"] or 0) + 1
-        response = supabase.table("games").update({"questions_asked": new_count}).eq("id", game_id).execute()
+        response = get_supabase_client().table("games").update({"questions_asked": new_count}).eq("id", game_id).execute()
         # If your supabase client raises exceptions on error, you may not need to check response.error
         # If not, uncomment the next lines:
         if not response.data:
@@ -369,7 +369,7 @@ def update_game_tts_settings(game_id, enable_tts=None, voice_id=None):
             update_data["voice_id"] = voice_id
             
         if update_data:
-            response = supabase.table("games").update(update_data).eq("id", game_id).execute()
+            response = get_supabase_client().table("games").update(update_data).eq("id", game_id).execute()
             if not response.data:
                 raise Exception(f"Failed to update TTS settings for game ID: {game_id}")
             return response.data[0]
@@ -433,7 +433,7 @@ def make_guess(game_id, player_id, guess, enable_tts=False, voice_id=None):
 def update_game_winner(game_id, winner_id):
     """Set winner and mark game as finished."""
     try:
-        response = supabase.table("games").update({
+        response = get_supabase_client().table("games").update({
             "winner_id": winner_id,
             "status": "finished",
             "completed_at": "now()"
@@ -454,7 +454,7 @@ def update_player_stats(winner_id, game_id):
         game = get_game(game_id)
         difficulty = game.get("difficulty", 1)
 
-        participants_resp = supabase.table("game_participants").select("player_id").eq("game_id", game_id).execute()
+        participants_resp = get_supabase_client().table("game_participants").select("player_id").eq("game_id", game_id).execute()
         if not participants_resp.data:
             raise Exception(f"Failed to get participants for game ID: {game_id}")
         players = participants_resp.data
@@ -468,7 +468,7 @@ def update_player_stats(winner_id, game_id):
             diff_stats = get_or_create_player_stats_difficulty(player_id, difficulty)
 
             # Count questions asked by this player in this game
-            questions_resp = supabase.table("game_questions").select("*").eq("game_id", game_id).eq("player_id", player_id).execute()
+            questions_resp = get_supabase_client().table("game_questions").select("*").eq("game_id", game_id).eq("player_id", player_id).execute()
             questions_asked = len(questions_resp.data)
 
             # Update overall and difficulty stats
@@ -485,7 +485,7 @@ def update_player_stats(winner_id, game_id):
 
 def get_or_create_player_stats(player_id):
     try:
-        resp = supabase.table("player_stats").select("*").eq("player_id", player_id).execute()
+        resp = get_supabase_client().table("player_stats").select("*").eq("player_id", player_id).execute()
         if resp.data:
             return resp.data[0]
         # If none exists, create default stats object
@@ -504,7 +504,7 @@ def get_or_create_player_stats(player_id):
 
 def get_or_create_player_stats_difficulty(player_id, difficulty):
     try:
-        resp = supabase.table("player_stats_difficulty").select("*").eq("player_id", player_id).eq("difficulty", difficulty).execute()
+        resp = get_supabase_client().table("player_stats_difficulty").select("*").eq("player_id", player_id).eq("difficulty", difficulty).execute()
         if resp.data:
             return resp.data[0]
         # Create default stats if missing
@@ -549,7 +549,7 @@ def update_stats_data(current_stats, is_winner, questions_asked):
 
 def upsert_player_stats(player_id, stats):
     try:
-        resp = supabase.table("player_stats").upsert(stats).execute()
+        resp = get_supabase_client().table("player_stats").upsert(stats).execute()
         if not resp.data:
             raise Exception(f"Failed to upsert player_stats for player ID: {player_id}")
     except Exception as e:
@@ -561,7 +561,7 @@ def upsert_player_stats_difficulty(player_id, difficulty, stats):
     try:
         # Make sure difficulty field is present
         stats["difficulty"] = difficulty
-        resp = supabase.table("player_stats_difficulty").upsert(stats).execute()
+        resp = get_supabase_client().table("player_stats_difficulty").upsert(stats).execute()
         if not resp.data:
             raise Exception(f"Failed to upsert player_stats_difficulty for player ID: {player_id}")
     except Exception as e:
@@ -574,6 +574,6 @@ def get_remaining_slots(game_id):
     max_players = game.get("max_players")
     if max_players is None:
         max_players = 1
-    participants_resp = supabase.table("game_participants").select("player_id").eq("game_id", game_id).execute()
+    participants_resp = get_supabase_client().table("game_participants").select("player_id").eq("game_id", game_id).execute()
     current_count = len(participants_resp.data) if participants_resp.data else 0
     return max_players - current_count

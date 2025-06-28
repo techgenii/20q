@@ -131,7 +131,7 @@ def test_make_guess_failure():
 
 # Authentication Tests
 def test_auth_signup_success():
-    with patch("backend.app.supabase_auth.auth.sign_up") as mock_signup:
+    with patch("backend.app.get_supabase_auth_client") as mock_auth:
         mock_user = MagicMock()
         mock_user.id = "test-user-id"
         mock_user.email = "test@example.com"
@@ -144,13 +144,13 @@ def test_auth_signup_success():
         mock_response = MagicMock()
         mock_response.user = mock_user
         mock_response.session = mock_session
-        mock_signup.return_value = mock_response
+        mock_auth.return_value.auth.sign_up.return_value = mock_response
         
-        with patch("backend.app.supabase.table") as mock_table:
+        with patch("backend.app.get_supabase_client") as mock_table:
             # Mock insert
-            mock_table.return_value.insert.return_value.execute.return_value = MagicMock()
+            mock_table.return_value.table.return_value.insert.return_value.execute.return_value = MagicMock()
             # Mock select for player fields
-            mock_table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value.data = {
+            mock_table.return_value.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value.data = {
                 "avatar_url": None,
                 "last_login_at": None,
                 "bio": None,
@@ -174,8 +174,10 @@ def test_auth_signup_success():
             assert data["user"]["achievements"] == []
 
 def test_auth_signup_failure():
-    with patch("backend.app.supabase_auth.auth.sign_up") as mock_signup:
-        mock_signup.return_value.user = None
+    with patch("backend.app.get_supabase_auth_client") as mock_auth:
+        mock_response = MagicMock()
+        mock_response.user = None
+        mock_auth.return_value.auth.sign_up.return_value = mock_response
         
         resp = client.post("/auth/signup", json={
             "email": "test@example.com",
@@ -186,7 +188,7 @@ def test_auth_signup_failure():
         assert "User registration failed" in resp.json()["detail"]
 
 def test_auth_login_success():
-    with patch("backend.app.supabase_auth.auth.sign_in_with_password") as mock_login:
+    with patch("backend.app.get_supabase_auth_client") as mock_auth:
         mock_user = MagicMock()
         mock_user.id = "test-user-id"
         mock_user.email = "test@example.com"
@@ -199,10 +201,10 @@ def test_auth_login_success():
         mock_response = MagicMock()
         mock_response.user = mock_user
         mock_response.session = mock_session
-        mock_login.return_value = mock_response
-        with patch("backend.app.supabase.table") as mock_table:
+        mock_auth.return_value.auth.sign_in_with_password.return_value = mock_response
+        with patch("backend.app.get_supabase_client") as mock_table:
             # Mock select for player fields
-            mock_table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value.data = {
+            mock_table.return_value.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value.data = {
                 "avatar_url": None,
                 "last_login_at": None,
                 "bio": None,
@@ -224,8 +226,10 @@ def test_auth_login_success():
             assert data["user"]["achievements"] == []
 
 def test_auth_login_failure():
-    with patch("backend.app.supabase_auth.auth.sign_in_with_password") as mock_login:
-        mock_login.return_value.user = None
+    with patch("backend.app.get_supabase_auth_client") as mock_auth:
+        mock_response = MagicMock()
+        mock_response.user = None
+        mock_auth.return_value.auth.sign_in_with_password.return_value = mock_response
         
         resp = client.post("/auth/login", json={
             "email": "test@example.com",
@@ -236,7 +240,7 @@ def test_auth_login_failure():
         assert "Invalid email or password" in resp.json()["detail"]
 
 def test_auth_logout_success():
-    with patch("backend.app.supabase_auth.auth.sign_out") as mock_logout:
+    with patch("backend.app.get_supabase_auth_client") as mock_auth:
         resp = client.post("/auth/logout")
         assert resp.status_code == 200
         assert resp.json()["message"] == "Successfully logged out"
@@ -248,7 +252,7 @@ def test_auth_me_success():
     assert data["id"] == "test-user-id"
 
 def test_auth_reset_password_success():
-    with patch("backend.app.supabase_auth.auth.reset_password_email") as mock_reset:
+    with patch("backend.app.get_supabase_auth_client") as mock_auth:
         resp = client.post("/auth/reset-password", params={"email": "test@example.com"})
         assert resp.status_code == 200
         assert resp.json()["message"] == "Password reset email sent"
@@ -533,8 +537,8 @@ def test_speech_to_text_no_api_key():
 
 # Edge Cases
 def test_auth_signup_exception():
-    with patch("backend.app.supabase_auth.auth.sign_up") as mock_signup:
-        mock_signup.side_effect = Exception("Database error")
+    with patch("backend.app.get_supabase_auth_client") as mock_auth:
+        mock_auth.side_effect = Exception("Database error")
         
         resp = client.post("/auth/signup", json={
             "email": "test@example.com",
@@ -545,8 +549,8 @@ def test_auth_signup_exception():
         assert "Registration failed" in resp.json()["detail"]
 
 def test_auth_logout_exception():
-    with patch("backend.app.supabase_auth.auth.sign_out") as mock_logout:
-        mock_logout.side_effect = Exception("Logout error")
+    with patch("backend.app.get_supabase_auth_client") as mock_auth:
+        mock_auth.side_effect = Exception("Logout error")
         
         resp = client.post("/auth/logout")
         

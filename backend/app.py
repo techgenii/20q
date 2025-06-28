@@ -36,7 +36,7 @@ from .game_logic import (
     start_game,
     get_remaining_slots,
 )
-from .supabase_client import supabase, supabase_auth
+from .supabase_client import get_supabase_client, get_supabase_auth_client
 
 # Initialize FastAPI app
 app = FastAPI(title="Whisper Chase: 20 Questions")
@@ -114,7 +114,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     
     try:
         # Verify token with Supabase
-        user = supabase_auth.auth.get_user(token)
+        user = get_supabase_auth_client().auth.get_user(token)
         if not user.user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -138,7 +138,7 @@ async def get_current_user_optional(credentials: HTTPAuthorizationCredentials = 
         return None
     
     try:
-        user = supabase_auth.auth.get_user(credentials.credentials)
+        user = get_supabase_auth_client().auth.get_user(credentials.credentials)
         return user.user if user.user else None
     except:
         return None
@@ -151,7 +151,7 @@ async def sign_up(user_data: UserSignUp):
     """
     try:
         # Sign up user with Supabase
-        response = supabase_auth.auth.sign_up({
+        response = get_supabase_auth_client().auth.sign_up({
             "email": user_data.email,
             "password": user_data.password,
             "options": {
@@ -168,7 +168,7 @@ async def sign_up(user_data: UserSignUp):
             )
         
         # Insert user into players table for FK constraint
-        supabase.table("players").insert({
+        get_supabase_client().table("players").insert({
             "id": response.user.id,
             "email": response.user.email,
             "username": response.user.user_metadata.get("full_name"),
@@ -180,7 +180,7 @@ async def sign_up(user_data: UserSignUp):
         }).execute()
         
         # Fetch the player record to get all fields
-        player = supabase.table("players").select("avatar_url, last_login_at, bio, favorite_category, achievements").eq("id", response.user.id).single().execute().data or {}
+        player = get_supabase_client().table("players").select("avatar_url, last_login_at, bio, favorite_category, achievements").eq("id", response.user.id).single().execute().data or {}
         user_response = UserResponse(
             id=response.user.id,
             email=response.user.email,
@@ -212,7 +212,7 @@ async def login(user_credentials: UserLogin):
     """
     try:
         # Sign in user with Supabase
-        response = supabase_auth.auth.sign_in_with_password({
+        response = get_supabase_auth_client().auth.sign_in_with_password({
             "email": user_credentials.email,
             "password": user_credentials.password
         })
@@ -224,7 +224,7 @@ async def login(user_credentials: UserLogin):
             )
         
         # Create user response
-        player = supabase.table("players").select("avatar_url, last_login_at, bio, favorite_category, achievements").eq("id", response.user.id).single().execute().data or {}
+        player = get_supabase_client().table("players").select("avatar_url, last_login_at, bio, favorite_category, achievements").eq("id", response.user.id).single().execute().data or {}
         user_response = UserResponse(
             id=response.user.id,
             email=response.user.email,
@@ -255,7 +255,7 @@ async def logout(current_user = Depends(get_current_user)):
     Logout current user
     """
     try:
-        supabase_auth.auth.sign_out()
+        get_supabase_auth_client().auth.sign_out()
         return {"message": "Successfully logged out"}
     except Exception as e:
         raise HTTPException(
@@ -281,7 +281,7 @@ async def reset_password(email: EmailStr):
     Send password reset email
     """
     try:
-        supabase_auth.auth.reset_password_email(email)
+        get_supabase_auth_client().auth.reset_password_email(email)
         return {"message": "Password reset email sent"}
     except Exception as e:
         raise HTTPException(
