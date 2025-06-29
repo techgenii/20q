@@ -39,6 +39,54 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.REGION }}
 
+      - name: Setup Lambda Execution Role
+        run: |
+          echo "Setting up Lambda execution role in region: $REGION"
+          
+          # Define role name
+          ROLE_NAME="WhisperChase-Lambda-Role"
+          ROLE_ARN="arn:aws:iam::$(aws sts get-caller-identity --query Account --output text):role/$ROLE_NAME"
+          
+          # Check if role exists
+          if aws iam get-role --role-name $ROLE_NAME &>/dev/null; then
+            echo "Using existing role: $ROLE_ARN"
+          else
+            echo "Creating new Lambda execution role..."
+            
+            # Create trust policy
+            cat > trust-policy.json << EOF
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Principal": {
+                  "Service": "lambda.amazonaws.com"
+                },
+                "Action": "sts:AssumeRole"
+              }
+            ]
+          }
+          EOF
+            
+            # Create the role
+            aws iam create-role \
+              --role-name $ROLE_NAME \
+              --assume-role-policy-document file://trust-policy.json \
+              --description "Lambda execution role for WhisperChase"
+            
+            # Attach basic execution policy
+            aws iam attach-role-policy \
+              --role-name $ROLE_NAME \
+              --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+            
+            echo "Created role: $ROLE_ARN"
+          fi
+          
+          # Update environment variable to use the correct role
+          echo "ROLE_ARN=$ROLE_ARN" >> $GITHUB_ENV
+          echo "Using role: $ROLE_ARN"
+
       - name: Build Lambda package
         run: |
           cd backend
