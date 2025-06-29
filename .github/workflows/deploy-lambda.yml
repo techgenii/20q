@@ -20,7 +20,7 @@ jobs:
       PYTHON_VERSION: 3.13
       HANDLER: main.handler
       RUNTIME: python3.13
-      FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
+      FUNCTION_NAME: ${{ secrets.FUNCTION_NAME }}
       ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
       REGION: ${{ secrets.AWS_REGION }}
       API_GATEWAY_NAME: ${{ secrets.API_GATEWAY_NAME || 'MyAPI' }}
