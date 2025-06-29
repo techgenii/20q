@@ -54,13 +54,13 @@ jobs:
       - name: Zip Lambda package
         run: |
           cd $BUILD_DIR
-          zip -r ../$ZIP_FILE .
+          zip -r ../lambda-deploy.zip .
           cd ..
 
       - uses: actions/upload-artifact@v4
         with:
           name: lambda-deploy
-          path: $ZIP_FILE
+          path: lambda-deploy.zip
 
       - name: Deploy Lambda & API Gateway
         run: |
@@ -79,11 +79,11 @@ jobs:
               --runtime $RUNTIME \
               --role $ROLE_ARN \
               --handler $HANDLER \
-              --zip-file fileb://$ZIP_FILE
+              --zip-file fileb://lambda-deploy.zip
           else
             aws lambda update-function-code \
               --function-name $FUNCTION_NAME \
-              --zip-file fileb://$ZIP_FILE
+              --zip-file fileb://lambda-deploy.zip
           fi
 
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
