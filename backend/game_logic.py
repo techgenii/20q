@@ -28,6 +28,7 @@ from .supabase_client import get_supabase_client
 # Optional: use dotenv only locally
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     pass
@@ -37,8 +38,11 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # ElevenLabs API configuration
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")  # Default voice ID
+ELEVENLABS_VOICE_ID = os.getenv(
+    "ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM"
+)  # Default voice ID
 ELEVENLABS_BASE_URL = os.getenv("ELEVENLABS_BASE_URL")
+
 
 # Load secret words from supabase
 def load_secret_words():
@@ -47,45 +51,43 @@ def load_secret_words():
         raise Exception("Supabase error: No data returned from secret_words table.")
     return response.data
 
+
 SECRET_WORDS = load_secret_words()
 
 
 def generate_speech(text, voice_id=None, model_id="eleven_monolingual_v1"):
     """
     Generate speech using ElevenLabs API
-    
+
     Args:
         text (str): Text to convert to speech
         voice_id (str): ElevenLabs voice ID (optional, uses default if not provided)
         model_id (str): ElevenLabs model ID
-    
+
     Returns:
         bytes: Audio data as bytes, or None if failed
     """
     if not ELEVENLABS_API_KEY:
         print("ElevenLabs API key not found. Speech generation disabled.")
         return None
-    
+
     if not voice_id:
         voice_id = ELEVENLABS_VOICE_ID
-    
+
     url = f"{ELEVENLABS_BASE_URL}/text-to-speech/{voice_id}"
-    
+
     headers = {
         "Accept": "audio/mpeg",
         "Content-Type": "application/json",
-        "xi-api-key": ELEVENLABS_API_KEY
+        "xi-api-key": ELEVENLABS_API_KEY,
     }
-    
+
     data = {
         "text": text,
         "model_id": model_id,
-        "voice_settings": {
-            "stability": 0.5,
-            "similarity_boost": 0.5
-        }
+        "voice_settings": {"stability": 0.5, "similarity_boost": 0.5},
     }
-    
+
     try:
         response = requests.post(url, json=data, headers=headers)
         if response.status_code == 200:
@@ -102,10 +104,10 @@ def get_available_voices():
     """Get list of available voices from ElevenLabs"""
     if not ELEVENLABS_API_KEY:
         return []
-    
+
     url = f"{ELEVENLABS_BASE_URL}/voices"
     headers = {"xi-api-key": ELEVENLABS_API_KEY}
-    
+
     try:
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
@@ -129,7 +131,15 @@ def choose_secret_word(difficulty=None):
     return random.choice(filtered)["name"]
 
 
-def start_game(host_player_id, difficulty=None, enable_tts=False, voice_id=None, game_type=None, max_players=None, guessed_word=None):
+def start_game(
+    host_player_id,
+    difficulty=None,
+    enable_tts=False,
+    voice_id=None,
+    game_type=None,
+    max_players=None,
+    guessed_word=None,
+):
     """Create a new game with a secret word, store difficulty, and support game_type, max_players, guessed_word."""
     try:
         secret_word_entry = None
@@ -152,7 +162,7 @@ def start_game(host_player_id, difficulty=None, enable_tts=False, voice_id=None,
             "questions_asked": 0,
             "current_player_id": host_player_id,
             "enable_tts": enable_tts,
-            "voice_id": voice_id or ELEVENLABS_VOICE_ID
+            "voice_id": voice_id or ELEVENLABS_VOICE_ID,
         }
         if game_type is not None:
             data["game_type"] = game_type
@@ -171,7 +181,9 @@ def start_game(host_player_id, difficulty=None, enable_tts=False, voice_id=None,
             welcome_text = f"Welcome to 20 Questions! I'm thinking of something with difficulty level {difficulty_level}. You have 20 questions to guess what it is. Good luck!"
             audio_data = generate_speech(welcome_text, voice_id)
             if audio_data:
-                game_data["welcome_audio"] = base64.b64encode(audio_data).decode('utf-8')
+                game_data["welcome_audio"] = base64.b64encode(audio_data).decode(
+                    "utf-8"
+                )
         return game_data
     except Exception as e:
         print(f"Error in start_game: {e}")
@@ -181,11 +193,10 @@ def start_game(host_player_id, difficulty=None, enable_tts=False, voice_id=None,
 def join_game(game_id, player_id):
     """Add a player to a game."""
     try:
-        data = {
-            "game_id": game_id,
-            "player_id": player_id
-        }
-        response = get_supabase_client().table("game_participants").insert(data).execute()
+        data = {"game_id": game_id, "player_id": player_id}
+        response = (
+            get_supabase_client().table("game_participants").insert(data).execute()
+        )
         if not response.data:
             raise Exception("Failed to join game with the given game ID.")
         return response.data[0]
@@ -197,25 +208,27 @@ def join_game(game_id, player_id):
 def ask_openai_question(secret_word, question, enable_tts=False, voice_id=None):
     """Send player question + secret word to OpenAI, get Yes/No/Maybe answer with optional TTS."""
     try:
-        instruction_prompt = f"""You are playing 20 Questions. The secret word is "{secret_word}"""
+        instruction_prompt = (
+            f"""You are playing 20 Questions. The secret word is "{secret_word}"""
+        )
         prompt = f"""The player asked: "{question}" Answer with only one word: Yes, No, or Maybe."""
         response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": instruction_prompt},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": prompt},
             ],
-            temperature=0
+            temperature=0,
         )
-        answer = response.choices[0].message.content.strip().rstrip('.')
+        answer = response.choices[0].message.content.strip().rstrip(".")
         result = {"answer": answer}
-        
+
         # Generate TTS if enabled
         if enable_tts and answer:
             audio_data = generate_speech(answer, voice_id)
             if audio_data:
-                result["audio"] = base64.b64encode(audio_data).decode('utf-8')
-        
+                result["audio"] = base64.b64encode(audio_data).decode("utf-8")
+
         return result
     except Exception as e:
         print(f"Error in ask_openai_question: {e}")
@@ -233,46 +246,49 @@ def ask_question_with_tts(game_id, player_id, question):
         secret_word = game["secret_word"]
         enable_tts = game.get("enable_tts", False)
         voice_id = game.get("voice_id")
-        
+
         # Get the AI response
         ai_response = ask_openai_question(secret_word, question, enable_tts, voice_id)
         answer = ai_response["answer"]
-        
+
         # Increment question count
         question_count = increment_questions_asked(game_id)
-        
+
         # Record the question in database
-        question_record = record_question(game_id, player_id, question, answer, question_count)
-        
+        question_record = record_question(
+            game_id, player_id, question, answer, question_count
+        )
+
         # Prepare response
         result = {
             "answer": answer,
             "question_number": question_count,
             "questions_remaining": max(0, 20 - question_count),
             "game_over": question_count >= 20,
-            "question_record": question_record
+            "question_record": question_record,
         }
-        
+
         # Add audio if available
         if "audio" in ai_response:
             result["audio"] = ai_response["audio"]
-            
+
         # Check if game should end due to question limit
         if question_count >= 20:
             # Update game status to finished (no winner)
-            get_supabase_client().table("games").update({
-                "status": "finished",
-                "completed_at": "now()"
-            }).eq("id", game_id).execute()
-            
+            get_supabase_client().table("games").update(
+                {"status": "finished", "completed_at": "now()"}
+            ).eq("id", game_id).execute()
+
             if enable_tts:
                 game_over_text = f"Game over! You've used all 20 questions. The answer was {secret_word}."
                 audio_data = generate_speech(game_over_text, voice_id)
                 if audio_data:
-                    result["game_over_audio"] = base64.b64encode(audio_data).decode('utf-8')
-        
+                    result["game_over_audio"] = base64.b64encode(audio_data).decode(
+                        "utf-8"
+                    )
+
         return result
-        
+
     except Exception as e:
         print(f"Error in ask_question_with_tts: {e}")
         raise
@@ -287,7 +303,7 @@ def record_question(game_id, player_id, question, answer, question_number):
             "player_id": player_id,
             "question": question,
             "answer": True if answer_str.lower() == "yes" else False,
-            "question_number": question_number
+            "question_number": question_number,
         }
         response = get_supabase_client().table("game_questions").insert(data).execute()
         if not response.data:
@@ -301,7 +317,14 @@ def record_question(game_id, player_id, question, answer, question_number):
 def get_game(game_id):
     """Retrieve game data."""
     try:
-        response = get_supabase_client().table("games").select("*").eq("id", game_id).single().execute()
+        response = (
+            get_supabase_client()
+            .table("games")
+            .select("*")
+            .eq("id", game_id)
+            .single()
+            .execute()
+        )
         if not response.data:
             raise Exception("No game found with the given ID.")
         return response.data
@@ -316,7 +339,13 @@ def increment_questions_asked(game_id):
     try:
         game = get_game(game_id)
         new_count = (game["questions_asked"] or 0) + 1
-        response = get_supabase_client().table("games").update({"questions_asked": new_count}).eq("id", game_id).execute()
+        response = (
+            get_supabase_client()
+            .table("games")
+            .update({"questions_asked": new_count})
+            .eq("id", game_id)
+            .execute()
+        )
         # If your supabase client raises exceptions on error, you may not need to check response.error
         # If not, uncomment the next lines:
         if not response.data:
@@ -337,12 +366,12 @@ def make_guess_with_tts(game_id, player_id, guess):
         game = get_game(game_id)
         enable_tts = game.get("enable_tts", False)
         voice_id = game.get("voice_id")
-        
+
         # Make the guess
         guess_result = make_guess(game_id, player_id, guess, enable_tts, voice_id)
-        
+
         return guess_result
-        
+
     except Exception as e:
         print(f"Error in make_guess_with_tts: {e}")
         raise
@@ -354,7 +383,7 @@ def get_game_audio_settings(game_id):
         game = get_game(game_id)
         return {
             "enable_tts": game.get("enable_tts", False),
-            "voice_id": game.get("voice_id", ELEVENLABS_VOICE_ID)
+            "voice_id": game.get("voice_id", ELEVENLABS_VOICE_ID),
         }
     except Exception as e:
         print(f"Error in get_game_audio_settings: {e}")
@@ -369,13 +398,19 @@ def update_game_tts_settings(game_id, enable_tts=None, voice_id=None):
             update_data["enable_tts"] = enable_tts
         if voice_id is not None:
             update_data["voice_id"] = voice_id
-            
+
         if update_data:
-            response = get_supabase_client().table("games").update(update_data).eq("id", game_id).execute()
+            response = (
+                get_supabase_client()
+                .table("games")
+                .update(update_data)
+                .eq("id", game_id)
+                .execute()
+            )
             if not response.data:
                 raise Exception(f"Failed to update TTS settings for game ID: {game_id}")
             return response.data[0]
-        
+
         return get_game(game_id)
     except Exception as e:
         print(f"Error in update_game_tts_settings: {e}")
@@ -383,6 +418,8 @@ def update_game_tts_settings(game_id, enable_tts=None, voice_id=None):
 
 
 """Check guess correctness with OpenAI, update game if correct, with optional TTS."""
+
+
 def make_guess(game_id, player_id, guess, enable_tts=False, voice_id=None):
     """
     Check if the guess is correct. If so, update the game winner.
@@ -392,42 +429,46 @@ def make_guess(game_id, player_id, guess, enable_tts=False, voice_id=None):
         game = get_game(game_id)
         secret_word = game["secret_word"]
 
-        instruction_prompt = f"""You are playing 20 Questions. The secret word is "{secret_word}"."""
+        instruction_prompt = (
+            f"""You are playing 20 Questions. The secret word is "{secret_word}"."""
+        )
         prompt = f"""The player guessed: "{guess}"\nReply with exactly one word: Correct or Incorrect."""
-        
+
         response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": instruction_prompt},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": prompt},
             ],
-            temperature=0
+            temperature=0,
         )
-        result_text = response.choices[0].message.content.strip().rstrip('.').lower()
-        
+        result_text = response.choices[0].message.content.strip().rstrip(".").lower()
+
         result = {"correct": result_text == "correct", "message": result_text}
-        
+
         if result_text == "correct":
             # Update game winner and status
             update_game_winner(game_id, player_id)
-            success_message = f"Congratulations! You guessed correctly! The answer was {secret_word}."
+            success_message = (
+                f"Congratulations! You guessed correctly! The answer was {secret_word}."
+            )
             result["message"] = success_message
-            
+
             # Generate TTS for success
             if enable_tts:
                 audio_data = generate_speech(success_message, voice_id)
                 if audio_data:
-                    result["audio"] = base64.b64encode(audio_data).decode('utf-8')
+                    result["audio"] = base64.b64encode(audio_data).decode("utf-8")
         else:
             failure_message = f"Sorry, that's not correct. The answer was {secret_word}. Better luck next time!"
             result["message"] = failure_message
-            
+
             # Generate TTS for failure
             if enable_tts:
                 audio_data = generate_speech(failure_message, voice_id)
                 if audio_data:
-                    result["audio"] = base64.b64encode(audio_data).decode('utf-8')
-        
+                    result["audio"] = base64.b64encode(audio_data).decode("utf-8")
+
         return result
     except Exception as e:
         print(f"Error in make_guess: {e}")
@@ -437,15 +478,19 @@ def make_guess(game_id, player_id, guess, enable_tts=False, voice_id=None):
 def update_game_winner(game_id, winner_id):
     """Set winner and mark game as finished."""
     try:
-        response = get_supabase_client().table("games").update({
-            "winner_id": winner_id,
-            "status": "finished",
-            "completed_at": "now()"
-        }).eq("id", game_id).execute()
-        
+        response = (
+            get_supabase_client()
+            .table("games")
+            .update(
+                {"winner_id": winner_id, "status": "finished", "completed_at": "now()"}
+            )
+            .eq("id", game_id)
+            .execute()
+        )
+
         if not response.data:
             raise Exception(f"Failed to update game winner for game ID: {game_id}")
-        
+
         # After finishing, update player stats
         update_player_stats(winner_id, game_id)
     except Exception as e:
@@ -458,25 +503,40 @@ def update_player_stats(winner_id, game_id):
         game = get_game(game_id)
         difficulty = game.get("difficulty", 1)
 
-        participants_resp = get_supabase_client().table("game_participants").select("player_id").eq("game_id", game_id).execute()
+        participants_resp = (
+            get_supabase_client()
+            .table("game_participants")
+            .select("player_id")
+            .eq("game_id", game_id)
+            .execute()
+        )
         if not participants_resp.data:
             raise Exception(f"Failed to get participants for game ID: {game_id}")
         players = participants_resp.data
 
         for p in players:
             player_id = p["player_id"]
-            is_winner = (player_id == winner_id)
+            is_winner = player_id == winner_id
 
             # Get current stats
             overall_stats = get_or_create_player_stats(player_id)
             diff_stats = get_or_create_player_stats_difficulty(player_id, difficulty)
 
             # Count questions asked by this player in this game
-            questions_resp = get_supabase_client().table("game_questions").select("*").eq("game_id", game_id).eq("player_id", player_id).execute()
+            questions_resp = (
+                get_supabase_client()
+                .table("game_questions")
+                .select("*")
+                .eq("game_id", game_id)
+                .eq("player_id", player_id)
+                .execute()
+            )
             questions_asked = len(questions_resp.data)
 
             # Update overall and difficulty stats
-            updated_overall = update_stats_data(overall_stats, is_winner, questions_asked)
+            updated_overall = update_stats_data(
+                overall_stats, is_winner, questions_asked
+            )
             updated_diff = update_stats_data(diff_stats, is_winner, questions_asked)
 
             # Upsert both stats
@@ -489,7 +549,13 @@ def update_player_stats(winner_id, game_id):
 
 def get_or_create_player_stats(player_id):
     try:
-        resp = get_supabase_client().table("player_stats").select("*").eq("player_id", player_id).execute()
+        resp = (
+            get_supabase_client()
+            .table("player_stats")
+            .select("*")
+            .eq("player_id", player_id)
+            .execute()
+        )
         if resp.data:
             return resp.data[0]
         # If none exists, create default stats object
@@ -499,7 +565,7 @@ def get_or_create_player_stats(player_id):
             "games_won": 0,
             "total_questions_asked": 0,
             "average_questions_to_win": 0,
-            "win_rate": 0
+            "win_rate": 0,
         }
     except Exception as e:
         print(f"Error in get_or_create_player_stats: {e}")
@@ -508,7 +574,14 @@ def get_or_create_player_stats(player_id):
 
 def get_or_create_player_stats_difficulty(player_id, difficulty):
     try:
-        resp = get_supabase_client().table("player_stats_difficulty").select("*").eq("player_id", player_id).eq("difficulty", difficulty).execute()
+        resp = (
+            get_supabase_client()
+            .table("player_stats_difficulty")
+            .select("*")
+            .eq("player_id", player_id)
+            .eq("difficulty", difficulty)
+            .execute()
+        )
         if resp.data:
             return resp.data[0]
         # Create default stats if missing
@@ -519,7 +592,7 @@ def get_or_create_player_stats_difficulty(player_id, difficulty):
             "games_won": 0,
             "total_questions_asked": 0,
             "average_questions_to_win": 0,
-            "win_rate": 0
+            "win_rate": 0,
         }
     except Exception as e:
         print(f"Error in get_or_create_player_stats_difficulty: {e}")
@@ -529,7 +602,9 @@ def get_or_create_player_stats_difficulty(player_id, difficulty):
 def update_stats_data(current_stats, is_winner, questions_asked):
     games_played = current_stats.get("games_played", 0) + 1
     games_won = current_stats.get("games_won", 0) + (1 if is_winner else 0)
-    total_questions_asked = current_stats.get("total_questions_asked", 0) + questions_asked
+    total_questions_asked = (
+        current_stats.get("total_questions_asked", 0) + questions_asked
+    )
 
     # Update average questions to win only if player won
     avg_qtw = current_stats.get("average_questions_to_win", 0)
@@ -547,7 +622,7 @@ def update_stats_data(current_stats, is_winner, questions_asked):
         "games_won": games_won,
         "total_questions_asked": total_questions_asked,
         "average_questions_to_win": average_questions_to_win,
-        "win_rate": win_rate
+        "win_rate": win_rate,
     }
 
 
@@ -565,9 +640,16 @@ def upsert_player_stats_difficulty(player_id, difficulty, stats):
     try:
         # Make sure difficulty field is present
         stats["difficulty"] = difficulty
-        resp = get_supabase_client().table("player_stats_difficulty").upsert(stats).execute()
+        resp = (
+            get_supabase_client()
+            .table("player_stats_difficulty")
+            .upsert(stats)
+            .execute()
+        )
         if not resp.data:
-            raise Exception(f"Failed to upsert player_stats_difficulty for player ID: {player_id}")
+            raise Exception(
+                f"Failed to upsert player_stats_difficulty for player ID: {player_id}"
+            )
     except Exception as e:
         print(f"Error in upsert_player_stats_difficulty: {e}")
         raise
@@ -578,6 +660,12 @@ def get_remaining_slots(game_id):
     max_players = game.get("max_players")
     if max_players is None:
         max_players = 1
-    participants_resp = get_supabase_client().table("game_participants").select("player_id").eq("game_id", game_id).execute()
+    participants_resp = (
+        get_supabase_client()
+        .table("game_participants")
+        .select("player_id")
+        .eq("game_id", game_id)
+        .execute()
+    )
     current_count = len(participants_resp.data) if participants_resp.data else 0
     return max_players - current_count

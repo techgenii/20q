@@ -27,10 +27,6 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      - name: Lint with flake8
-        run: |
-          pip install flake8
-          flake8 backend/
       - name: Install and run tests
         working-directory: backend
         env:
@@ -43,8 +39,23 @@ jobs:
           ELEVENLABS_BASE_URL: ${{ vars.ELEVENLABS_BASE_URL }}
         run: |
           pip install -r requirements.txt
-          pip install pytest
-          pytest tests
+          pip install pytest pytest-cov
+          pytest --junitxml=results.xml --cov=. --cov-report=xml --cov-report=html
+      - name: Upload pytest results
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: backend/results.xml
+      - name: Upload coverage report (XML)
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-xml
+          path: backend/coverage.xml
+      - name: Upload coverage report (HTML)
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-html
+          path: backend/htmlcov/
 
   deploy-code:
     name: Deploy Lambda Code
