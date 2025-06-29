@@ -1,298 +1,147 @@
-name: Deploy to Lambda
+name: Deploy to Lambda (ARM64)
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
-  deploy-code:
+  deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       ZIP_FILE: lambda-deploy.zip
       BUILD_DIR: build
       PYTHON_VERSION: 3.13
       HANDLER: app.handler
       RUNTIME: python3.13
-      STAGE_NAME: '$default'
+      ARCHITECTURE: arm64
+      STAGE_NAME: WhisperChase  # Custom stage name
       FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
       ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
       REGION: ${{ secrets.AWS_REGION }}
-      API_GATEWAY_NAME: ${{ secrets.API_GATEWAY_NAME || 'MyAPI' }}
+      S3_BUCKET: ${{ secrets.LAMBDA_S3_BUCKET }}
+      API_NAME: WhisperChaseAPI  # Distinct API name
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          architecture: arm64
 
-      - uses: actions/cache@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.REGION }}
 
-      - name: Prepare build directory
+      - name: Build Lambda package (ARM64)
         run: |
           rm -rf $BUILD_DIR $ZIP_FILE
           mkdir -p $BUILD_DIR
 
-          # Install dependencies for Lambda
-          pip install -r backend/requirements.txt -t $BUILD_DIR \
-            --platform manylinux2014_x86_64 --only-binary=:all: \
-            --upgrade --force-reinstall --no-cache-dir
+          pip install -r requirements.txt -t $BUILD_DIR \
+            --platform manylinux_2014_aarch64 \
+            --only-binary=:all: \
+            --no-cache-dir \
+            --upgrade \
+            --python-version 3.13
 
-          # Copy application code and cleanup
-          cp -r backend/. $BUILD_DIR/
-          touch $BUILD_DIR/__init__.py
-          find $BUILD_DIR \( -name "__pycache__" -o -name "tests" \) -type d -exec rm -rf {} + 2>/dev/null || true
-          find $BUILD_DIR -name "*.pyc" -delete 2>/dev/null || true
+          cp app.py game_logic.py supabase_client.py elevenlabs_utils.py __init__.py $BUILD_DIR/
+          find $BUILD_DIR \( -name '__pycache__' -o -name '*.pyc' \) -exec rm -rf {} +
 
-      - name: Check build contents
-        run: |
-          echo "Build directory contents:"
-          ls -la $BUILD_DIR/
-          
-          if [ ! -f "$BUILD_DIR/app.py" ]; then
-            echo "❌ app.py not found at root of build dir!"
-            echo "Available files:"
-            find $BUILD_DIR -name "*.py" -type f
-            exit 1
-          fi
-          
-          # Check if handler function exists
-          if ! grep -q "def handler" "$BUILD_DIR/app.py"; then
-            echo "⚠️  Warning: 'handler' function not found in app.py"
-            echo "Available functions:"
-            grep "^def " "$BUILD_DIR/app.py" || echo "No functions found"
-          fi
-          
-          # Check for email-validator specifically
-          echo "Checking for email-validator installation..."
-          if [ -d "$BUILD_DIR/email_validator" ] || find $BUILD_DIR -name "*email*validator*" -type d | head -1; then
-            echo "✅ email-validator found"
-          else
-            echo "❌ email-validator not found - this may cause import errors"
-          fi
-          
-          # List all installed packages for debugging
-          echo "Installed packages:"
-          find $BUILD_DIR -maxdepth 1 -type d -name "*" | grep -E "\.(dist-info|egg-info)$" | head -10
-
-      - name: Zip Lambda package
+      - name: Package deployment
         run: |
           cd $BUILD_DIR
-          zip -r9 ../lambda-deploy.zip . -x "*.git*" "*.DS_Store*"
+          zip -r9 ../$ZIP_FILE .
           cd ..
-          
-          # Check zip file size (Lambda has a 50MB limit for direct upload)
-          ZIP_SIZE=$(stat -f%z lambda-deploy.zip 2>/dev/null || stat -c%s lambda-deploy.zip)
-          ZIP_SIZE_MB=$((ZIP_SIZE / 1024 / 1024))
-          echo "Lambda package size: ${ZIP_SIZE_MB}MB"
-          
-          if [ $ZIP_SIZE_MB -gt 50 ]; then
-            echo "❌ Package too large (${ZIP_SIZE_MB}MB). Consider using S3 for deployment."
-            exit 1
-          fi
-
-      - name: Verify Lambda package exists
-        run: |
-          if [ ! -f lambda-deploy.zip ]; then
-            echo "❌ ERROR: Lambda deployment package not found."
-            exit 1
-          fi
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: lambda-deploy
-          path: lambda-deploy.zip
-
-      - name: Configure AWS CLI
-        run: |
-          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws configure set region $REGION
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          echo "size=$(du -h $ZIP_FILE | cut -f1)" >> $GITHUB_OUTPUT
 
       - name: Deploy Lambda Function
         run: |
-          echo "Deploying Lambda function: $FUNCTION_NAME"
-
-          # Create temporary file for environment variables (more secure)
-          if [ -n "$LAMBDA_ENV_VARS" ]; then
-              echo "Setting up environment variables..."
-              # Write to temporary file and validate JSON
-              echo "$LAMBDA_ENV_VARS" > /tmp/env_vars_raw.json
-              if jq empty /tmp/env_vars_raw.json 2>/dev/null; then
-                  # Show only the keys, not the values
-                  echo "Environment variables configured: $(jq -r 'keys | join(", ")' /tmp/env_vars_raw.json)"
-                  # Transform the JSON to wrap variables under "Variables" key
-                  jq '{Variables: .}' /tmp/env_vars_raw.json > /tmp/env_vars.json
-                  ENV_VARS_FILE="/tmp/env_vars.json"
-              else
-                  echo "❌ Invalid JSON in LAMBDA_ENV_VARS secret"
-                  rm -f /tmp/env_vars_raw.json
-                  exit 1
-              fi
+          # Create environment variables
+          echo '{"Variables": $LAMBDA_ENV_VARS}' > env.json
+          
+          if aws lambda get-function --function-name $FUNCTION_NAME; then
+            # Update existing
+            aws lambda update-function-code \
+              --function-name $FUNCTION_NAME \
+              --zip-file fileb://$ZIP_FILE
+            aws lambda update-function-configuration \
+              --function-name $FUNCTION_NAME \
+              --architectures $ARCHITECTURE \
+              --environment file://env.json
           else
-              echo "No environment variables configured"
-              echo '{"Variables": {}}' > /tmp/env_vars.json
-              ENV_VARS_FILE="/tmp/env_vars.json"
+            # Create new
+            aws lambda create-function \
+              --function-name $FUNCTION_NAME \
+              --runtime $RUNTIME \
+              --role $ROLE_ARN \
+              --handler $HANDLER \
+              --architectures $ARCHITECTURE \
+              --zip-file fileb://$ZIP_FILE \
+              --environment file://env.json
           fi
-
-          if aws lambda get-function --function-name $FUNCTION_NAME &>/dev/null; then
-              echo "Updating existing function..."
-              aws lambda update-function-code --function-name $FUNCTION_NAME --zip-file fileb://lambda-deploy.zip
-              aws lambda wait function-updated --function-name $FUNCTION_NAME
-              # Update function configuration with environment variables from file
-              aws lambda update-function-configuration \
-                  --function-name $FUNCTION_NAME \
-                  --timeout 30 \
-                  --memory-size 128 \
-                  --environment file://$ENV_VARS_FILE
-          else
-              echo "Creating new function..."
-              aws lambda create-function \
-                  --function-name $FUNCTION_NAME \
-                  --runtime $RUNTIME \
-                  --role $ROLE_ARN \
-                  --handler $HANDLER \
-                  --zip-file fileb://lambda-deploy.zip \
-                  --timeout 30 \
-                  --memory-size 128 \
-                  --environment file://$ENV_VARS_FILE
-          fi
-
-          # Clean up temporary files
-          rm -f /tmp/env_vars.json /tmp/env_vars_raw.json
-
-          aws lambda wait function-active --function-name $FUNCTION_NAME
+          aws lambda wait function-updated --function-name $FUNCTION_NAME
         env:
-          LAMBDA_ENV_VARS: ${{ secrets.LAMBDA_ENV_VARS }}
+          LAMBDA_ENV_VARS: ${{ secrets.LAMBDA_ENV_VARS || '{}' }}
 
-      - name: Setup API Gateway
+      - name: Configure API Gateway
         run: |
+          # Create API with custom name
+          API_ID=$(aws apigatewayv2 create-api \
+            --name "$API_NAME" \
+            --protocol-type HTTP \
+            --query "ApiId" --output text)
+          
+          # Create integration
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          echo "Account ID: $ACCOUNT_ID"
+          LAMBDA_ARN="arn:aws:lambda:$REGION:$ACCOUNT_ID:function:$FUNCTION_NAME"
           
-          # Check if API exists
-          API_ID=$(aws apigatewayv2 get-apis --query "Items[?Name=='$API_GATEWAY_NAME'].ApiId" --output text)
-          
-          if [ -z "$API_ID" ] || [ "$API_ID" = "None" ]; then
-            echo "Creating new API Gateway..."
-            API_ID=$(aws apigatewayv2 create-api \
-              --name "$API_GATEWAY_NAME" \
-              --protocol-type HTTP \
-              --description "API for $FUNCTION_NAME" \
-              --query "ApiId" --output text)
-            echo "Created API with ID: $API_ID"
-          else
-            echo "Using existing API with ID: $API_ID"
-          fi
+          INTEGRATION_ID=$(aws apigatewayv2 create-integration \
+            --api-id $API_ID \
+            --integration-type AWS_PROXY \
+            --integration-uri $LAMBDA_ARN \
+            --payload-format-version 2.0 \
+            --query 'IntegrationId' --output text)
 
-          # Check if integration already exists for this function
-          LAMBDA_URI="arn:aws:lambda:$REGION:$ACCOUNT_ID:function:$FUNCTION_NAME"
-          EXISTING_INTEGRATION=$(aws apigatewayv2 get-integrations --api-id $API_ID --query "Items[?IntegrationUri=='$LAMBDA_URI'].IntegrationId" --output text)
-          
-          if [ -n "$EXISTING_INTEGRATION" ] && [ "$EXISTING_INTEGRATION" != "None" ]; then
-            echo "Using existing integration: $EXISTING_INTEGRATION"
-            INTEGRATION_ID="$EXISTING_INTEGRATION"
-          else
-            echo "Creating new integration..."
-            INTEGRATION_ID=$(aws apigatewayv2 create-integration \
-              --api-id $API_ID \
-              --integration-type AWS_PROXY \
-              --integration-uri $LAMBDA_URI \
-              --payload-format-version 2.0 \
-              --query 'IntegrationId' --output text)
-            echo "Created integration with ID: $INTEGRATION_ID"
-          fi
-
-          # Check and create routes only if they don't exist
-          ROOT_ROUTE_EXISTS=$(aws apigatewayv2 get-routes --api-id $API_ID --query "Items[?RouteKey=='ANY /'] | length(@)" --output text)
-          if [ "$ROOT_ROUTE_EXISTS" -eq 0 ]; then
-            echo "Creating root route..."
-            aws apigatewayv2 create-route \
-              --api-id $API_ID \
-              --route-key "ANY /" \
-              --target integrations/$INTEGRATION_ID
-          else
-            echo "Root route already exists, skipping creation."
-          fi
+          # Create routes
+          aws apigatewayv2 create-route \
+            --api-id $API_ID \
+            --route-key "ANY /" \
+            --target "integrations/$INTEGRATION_ID"
             
-          PROXY_ROUTE_EXISTS=$(aws apigatewayv2 get-routes --api-id $API_ID --query "Items[?RouteKey=='ANY /{proxy+}'] | length(@)" --output text)
-          if [ "$PROXY_ROUTE_EXISTS" -eq 0 ]; then
-            echo "Creating proxy route..."
-            aws apigatewayv2 create-route \
-              --api-id $API_ID \
-              --route-key "ANY /{proxy+}" \
-              --target integrations/$INTEGRATION_ID
-          else
-            echo "Proxy route already exists, skipping creation."
-          fi
+          aws apigatewayv2 create-route \
+            --api-id $API_ID \
+            --route-key "ANY /{proxy+}" \
+            --target "integrations/$INTEGRATION_ID"
           
-          # Check if stage exists
-          set +e
-          aws apigatewayv2 get-stage --api-id $API_ID --stage-name $STAGE_NAME > /dev/null 2>&1
-          STAGE_EXISTS=$?
-          set -e
+          # Create custom stage
+          aws apigatewayv2 create-stage \
+            --api-id $API_ID \
+            --stage-name $STAGE_NAME \
+            --auto-deploy
           
-          if [ $STAGE_EXISTS -ne 0 ]; then
-            echo "Creating stage '$STAGE_NAME'..."
-            aws apigatewayv2 create-stage \
-              --api-id $API_ID \
-              --stage-name $STAGE_NAME \
-              --auto-deploy
-          else
-            echo "Stage '$STAGE_NAME' already exists, skipping creation."
-          fi
-
-          # Add Lambda permission for API Gateway (use unique statement ID)
-          STATEMENT_ID="apigateway-access-$(date +%s)"
-          echo "Adding Lambda permission with statement ID: $STATEMENT_ID"
-          set +e
+          # Set permissions
           aws lambda add-permission \
             --function-name $FUNCTION_NAME \
-            --statement-id "$STATEMENT_ID" \
+            --statement-id "api-gateway-invoke" \
             --action lambda:InvokeFunction \
             --principal apigateway.amazonaws.com \
-            --source-arn "arn:aws:execute-api:$REGION:$ACCOUNT_ID:$API_ID/*/*" \
-            2>/dev/null
-          PERMISSION_RESULT=$?
-          set -e
-          
-          if [ $PERMISSION_RESULT -eq 0 ]; then
-            echo "Lambda permission added successfully."
-          else
-            echo "Lambda permission already exists or couldn't be added, continuing..."
-          fi
+            --source-arn "arn:aws:execute-api:$REGION:$ACCOUNT_ID:$API_ID/*/*/*"
 
-          # Output the API endpoint (no stage in URL for $default stage)
-          if [ "$STAGE_NAME" = '$default' ]; then
-            API_ENDPOINT="https://$API_ID.execute-api.$REGION.amazonaws.com"
-          else
-            API_ENDPOINT="https://$API_ID.execute-api.$REGION.amazonaws.com/$STAGE_NAME"
-          fi
-          
-          echo "🚀 Deployment successful!"
-          echo "API Endpoint: $API_ENDPOINT"
-          
-          # Test the endpoint
-          echo "Testing endpoint..."
-          set +e
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API_ENDPOINT" --max-time 10)
-          CURL_EXIT=$?
-          set -e
-          
-          if [ $CURL_EXIT -eq 0 ]; then
-            if [ "$HTTP_STATUS" -eq 200 ] || [ "$HTTP_STATUS" -eq 404 ] || [ "$HTTP_STATUS" -eq 500 ]; then
-              echo "✅ Endpoint is responding (HTTP $HTTP_STATUS)"
-            else
-              echo "⚠️  Endpoint returned HTTP $HTTP_STATUS"
-            fi
-          else
-            echo "⚠️  Could not test endpoint (timeout or connection error)"
-          fi
+          # Output endpoint
+          ENDPOINT="https://$API_ID.execute-api.$REGION.amazonaws.com/$STAGE_NAME"
+          echo "API_ENDPOINT=$ENDPOINT" >> $GITHUB_ENV
+          echo "::set-output name=endpoint::$ENDPOINT"
+
+      - name: Post deployment test
+        run: |
+          curl -s $API_ENDPOINT/health --max-time 10
+          echo "WhisperChase stage deployed successfully!"
+          echo "Access your API at: $API_ENDPOINT"

@@ -23,7 +23,7 @@ import base64
 import requests
 import openai
 
-from .supabase_client import get_supabase_client
+from supabase_client import get_supabase_client
 
 # Optional: use dotenv only locally
 try:

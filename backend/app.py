@@ -27,17 +27,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 from pydantic import BaseModel, EmailStr
 
-from .game_logic import (
-    ask_openai_question,
-    get_game,
-    increment_questions_asked,
-    join_game,
-    make_guess,
-    record_question,
-    start_game,
-    get_remaining_slots,
-)
-from .supabase_client import get_supabase_client, get_supabase_auth_client
+from game_logic import ask_openai_question, get_game, increment_questions_asked, join_game, make_guess, record_question, start_game, get_remaining_slots
+from supabase_client import get_supabase_client, get_supabase_auth_client
 
 print("Lambda cold start: app.py successfully loaded")
 

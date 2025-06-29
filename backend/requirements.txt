@@ -1,5 +1,4 @@
 fastapi
-uvicorn
 mangum
 pydantic
 pydantic[email]
@@ -10,4 +9,3 @@ python-multipart
 python-dotenv
 aiohttp
 email-validator
-pytest

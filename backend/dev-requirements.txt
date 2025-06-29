@@ -1,6 +1,9 @@
 # dev-requirements.txt
 -r requirements.txt
 
+# Dev
+uvicorn
+
 # Testing
 pytest
 pytest-mock
