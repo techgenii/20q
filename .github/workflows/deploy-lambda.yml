@@ -1,0 +1,120 @@
+name: Test & Deploy Backend to AWS Lambda + API Gateway
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-lambda.yml"
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Test, Package & Deploy
+    runs-on: ubuntu-latest
+
+    env:
+      ZIP_FILE: lambda-deploy.zip
+      BUILD_DIR: build
+      PYTHON_VERSION: 3.13
+      HANDLER: main.handler
+      RUNTIME: python3.13
+      FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
+      ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
+      REGION: ${{ secrets.AWS_REGION }}
+      API_GATEWAY_NAME: ${{ secrets.API_GATEWAY_NAME || 'MyAPI' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install and run tests
+        working-directory: backend
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+          pytest tests
+
+      - name: Build Lambda deployment package
+        run: |
+          rm -rf $BUILD_DIR $ZIP_FILE venv
+          mkdir -p $BUILD_DIR
+          cp -r backend/* $BUILD_DIR/
+
+          python -m venv venv
+          source venv/bin/activate
+          pip install -r backend/requirements.txt -t $BUILD_DIR
+          deactivate
+
+          cd $BUILD_DIR
+          zip -r ../$ZIP_FILE .
+          cd ..
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.REGION }}
+
+      - name: Check if Lambda function exists
+        id: check_lambda
+        run: |
+          set +e
+          aws lambda get-function --function-name $FUNCTION_NAME > /dev/null 2>&1
+          echo "exists=$?" >> $GITHUB_OUTPUT
+          set -e
+
+      - name: Create Lambda function (if missing)
+        if: steps.check_lambda.outputs.exists != '0'
+        run: |
+          aws lambda create-function \
+            --function-name $FUNCTION_NAME \
+            --runtime $RUNTIME \
+            --role $ROLE_ARN \
+            --handler $HANDLER \
+            --zip-file fileb://$ZIP_FILE
+
+      - name: Update Lambda function code
+        if: steps.check_lambda.outputs.exists == '0'
+        run: |
+          aws lambda update-function-code \
+            --function-name $FUNCTION_NAME \
+            --zip-file fileb://$ZIP_FILE
+
+      - name: Set up API Gateway
+        run: |
+          echo "Checking for existing API Gateway..."
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          API_ID=$(aws apigatewayv2 get-apis --query "Items[?Name=='$API_GATEWAY_NAME'].ApiId" --output text)
+
+          if [ -z "$API_ID" ]; then
+            echo "Creating new HTTP API..."
+            API_ID=$(aws apigatewayv2 create-api \
+              --name "$API_GATEWAY_NAME" \
+              --protocol-type HTTP \
+              --target arn:aws:lambda:$REGION:$ACCOUNT_ID:function:$FUNCTION_NAME \
+              --query "ApiId" --output text)
+
+            echo "Created API Gateway: $API_ID"
+          else
+            echo "API Gateway already exists: $API_ID"
+          fi
+
+          echo "Adding Lambda invoke permissions..."
+          aws lambda add-permission \
+            --function-name $FUNCTION_NAME \
+            --statement-id apigateway-access \
+            --action lambda:InvokeFunction \
+            --principal apigateway.amazonaws.com \
+            --source-arn arn:aws:execute-api:$REGION:$ACCOUNT_ID:$API_ID/*/*/ \
+            || echo "Permission already exists. Continuing..."
+
+          echo "🚀 Your API Gateway endpoint (after deployment):"
+          echo "https://$API_ID.execute-api.$REGION.amazonaws.com/"

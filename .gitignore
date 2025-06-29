@@ -8,8 +8,6 @@
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db
-Thumbs.db
 
 # Windows
 Thumbs.db
@@ -40,15 +38,12 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
+
+# Virtual environments
 env/
 venv/
 ENV/
 .venv/
-pip-log.txt
-pip-delete-this-directory.txt
-
-# C extensions
-*.pyd
 
 # Distribution / packaging
 build/
@@ -69,10 +64,6 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# PyInstaller
-*.manifest
-*.spec
-
 # Unit test / coverage reports
 htmlcov/
 .tox/
@@ -87,6 +78,14 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+
+# pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# PyInstaller
+*.manifest
+*.spec
 
 # Translations
 *.mo
@@ -231,12 +230,6 @@ web_modules/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variable files
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
-
 # parcel-bundler cache
 .cache
 .parcel-cache
@@ -247,7 +240,6 @@ out
 
 # Nuxt.js build / generate output
 .nuxt
-dist
 
 # Gatsby files
 .cache/
@@ -256,15 +248,8 @@ public
 # Vuepress build output
 .vuepress/dist
 
-# Serverless directories
-.serverless/
-.aws-sam/
-
 # FuseBox cache
 .fusebox/
-
-# DynamoDB Local files
-.dynamodb/
 
 # TernJS port file
 .tern-port
@@ -304,10 +289,8 @@ public
 # Vim
 *.swp
 *.swo
-*~
 
 # Emacs
-*~
 \#*\#
 /.emacs.desktop
 /.emacs.desktop.lock
@@ -337,6 +320,7 @@ tramp
 
 # AWS
 .aws/
+.aws-sam/
 
 # Google Cloud
 .gcloud/
@@ -349,6 +333,21 @@ tramp
 *.tfstate.*
 .terraform/
 .terraform.lock.hcl
+
+# DynamoDB Local files
+.dynamodb/
+
+# =============================================================================
+# ENVIRONMENT FILES
+# =============================================================================
+
+# dotenv environment variable files
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+.env.*
 
 # =============================================================================
 # TEMPORARY FILES
@@ -380,56 +379,5 @@ tramp
 local/
 dev/
 
-# Remove old Serverless Framework ignores
-# (serverless.yml, .serverless/, deploy.sh) are no longer needed
-
-# Environment files
-.env
-.env.*
-
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-.Python
-env/
-venv/
-ENV/
-.venv/
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# VSCode/IDE
-.vscode/
-.idea/
-*.sublime-workspace
-*.sublime-project
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Test/coverage
-htmlcov/
-.coverage
-.pytest_cache/
-coverage.xml
-
-# AWS SAM build artifacts
-.aws-sam/
-
-# Build
-/dist/
-/build/
-*.egg-info/
-
-# Misc
+# Logs
 *.log

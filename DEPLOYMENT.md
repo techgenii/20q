@@ -1,16 +1,16 @@
-# Deployment Guide: Whisper Chase 20 Questions (AWS SAM)
+# Deployment Guide: Whisper Chase 20 Questions
 
-This guide explains how to deploy the FastAPI backend to AWS Lambda using AWS SAM (Serverless Application Model).
+This guide explains how to deploy the FastAPI backend to AWS Lambda using direct AWS CLI deployment (without SAM).
 
 ## Prerequisites
 - AWS CLI configured with credentials
-- AWS SAM CLI installed
 - Python 3.13 installed
 - Node.js v22.17.0 or higher (for frontend)
 - Supabase project set up
+- Required API keys (OpenAI, ElevenLabs)
 
 ## Environment Variables
-Set these as parameters in your SAM template or in the AWS Lambda environment:
+Set these environment variables for your deployment:
 - SUPABASE_URL
 - SUPABASE_SERVICE_ROLE_KEY
 - SUPABASE_ANON_KEY
@@ -18,34 +18,126 @@ Set these as parameters in your SAM template or in the AWS Lambda environment:
 - ELEVENLABS_API_KEY
 - ELEVENLABS_VOICE_ID
 
-## Build and Deploy
+## Project Structure
+```
+20q/
+├── backend/
+│   ├── requirements.txt          # Production dependencies
+│   ├── dev-requirements.txt      # Development dependencies
+│   ├── pytest.ini               # Test configuration
+│   ├── app.py                   # FastAPI application
+│   └── tests/                   # Test files
+├── frontend/                    # React frontend
+└── .github/workflows/
+    └── deploy-lambda.yml        # CI/CD workflow
+```
 
-1. **Install dependencies:**
+## Local Development
+
+1. **Install backend dependencies:**
    ```bash
-   pip install -r requirements.txt -t backend
+   cd backend
+   pip install -r requirements.txt
+   pip install -r dev-requirements.txt
+   cd ..
    ```
 
-2. **Build the SAM application:**
+2. **Run tests:**
    ```bash
-   sam build
+   cd backend
+   pytest tests/
+   cd ..
    ```
 
-3. **Deploy to AWS Lambda:**
+3. **Start the development server:**
    ```bash
-   sam deploy --guided
+   cd backend
+   uvicorn app:app --reload --host 0.0.0.0 --port 8000
    ```
-   - The first time, SAM will prompt for stack name, region, and environment variables.
-   - On subsequent deploys, you can use `sam deploy` to reuse the configuration.
 
-## CI/CD with GitHub Actions
-- The workflow `.github/workflows/sam-deploy.yml` will run tests and deploy automatically on push to `main`.
-- All deployment is now handled via AWS SAM.
+## Automated Deployment (GitHub Actions)
 
-## Notes
-- All infrastructure is defined in `template.yaml`.
-- For local testing, use `sam local start-api`.
+The project uses GitHub Actions for automated deployment to AWS Lambda. The workflow `.github/workflows/deploy-lambda.yml` handles:
 
----
+1. **Testing:** Runs all tests before deployment
+2. **Packaging:** Creates a Lambda deployment package
+3. **Deployment:** Deploys to AWS Lambda and sets up API Gateway
+
+### Required GitHub Secrets
+
+Set these secrets in your GitHub repository:
+
+- `AWS_ACCESS_KEY_ID` - Your AWS access key
+- `AWS_SECRET_ACCESS_KEY` - Your AWS secret key
+- `AWS_REGION` - AWS region (e.g., us-west-2)
+- `LAMBDA_FUNCTION_NAME` - Name for your Lambda function
+- `LAMBDA_ROLE_ARN` - IAM role ARN for Lambda execution
+- `API_GATEWAY_NAME` - Name for your API Gateway (optional)
+
+### Deployment Process
+
+The workflow automatically:
+1. Runs tests on the backend code
+2. Creates a deployment package with dependencies
+3. Creates or updates the Lambda function
+4. Sets up API Gateway with HTTP API
+5. Configures Lambda permissions for API Gateway
+
+## Manual Deployment
+
+If you prefer to deploy manually:
+
+1. **Build the deployment package:**
+   ```bash
+   # Create build directory
+   mkdir -p build
+   cp -r backend/* build/
+   
+   # Install dependencies
+   python -m venv venv
+   source venv/bin/activate
+   pip install -r backend/requirements.txt -t build/
+   deactivate
+   
+   # Create ZIP file
+   cd build
+   zip -r ../lambda-deploy.zip .
+   cd ..
+   ```
+
+2. **Deploy to Lambda:**
+   ```bash
+   # Create or update function
+   aws lambda create-function \
+     --function-name your-function-name \
+     --runtime python3.13 \
+     --role your-role-arn \
+     --handler main.handler \
+     --zip-file fileb://lambda-deploy.zip
+   
+   # Or update existing function
+   aws lambda update-function-code \
+     --function-name your-function-name \
+     --zip-file fileb://lambda-deploy.zip
+   ```
+
+3. **Set up API Gateway:**
+   ```bash
+   # Create HTTP API
+   API_ID=$(aws apigatewayv2 create-api \
+     --name "YourAPI" \
+     --protocol-type HTTP \
+     --target arn:aws:lambda:region:account:function:your-function-name \
+     --query "ApiId" --output text)
+   
+   # Add Lambda permissions
+   aws lambda add-permission \
+     --function-name your-function-name \
+     --statement-id apigateway-access \
+     --action lambda:InvokeFunction \
+     --principal apigateway.amazonaws.com \
+     --source-arn arn:aws:execute-api:region:account:$API_ID/*/*/
+   ```
 
 ## API Endpoints
 
@@ -53,12 +145,12 @@ Once deployed, your API will be available at:
 
 ### Production
 ```
-https://[api-id].execute-api.us-east-1.amazonaws.com/prod/
+https://[api-id].execute-api.[region].amazonaws.com/
 ```
 
-### Staging
+### API Documentation
 ```
-https://[api-id].execute-api.us-east-1.amazonaws.com/staging/
+https://[api-id].execute-api.[region].amazonaws.com/docs
 ```
 
 ### Available Endpoints
@@ -78,7 +170,7 @@ https://[api-id].execute-api.us-east-1.amazonaws.com/staging/
 ```bash
 # View Lambda logs in CloudWatch
 aws logs describe-log-groups
-aws logs get-log-events --log-group-name /aws/lambda/<function-name> --log-stream-name <stream-name>
+aws logs get-log-events --log-group-name /aws/lambda/YourFunctionName --log-stream-name <stream-name>
 ```
 
 ### CloudWatch Dashboard
@@ -99,12 +191,17 @@ aws logs get-log-events --log-group-name /aws/lambda/<function-name> --log-strea
    - Check CloudTrail for permission denied errors
 
 3. **Python Dependencies**
-   - Ensure `requirements.txt` includes all dependencies
+   - Ensure `backend/requirements.txt` includes all dependencies
    - Check for version conflicts
+   - Use Python 3.13 for best compatibility
 
 4. **Lambda Timeout**
-   - Increase timeout in your SAM template if needed
+   - Increase timeout in Lambda configuration if needed
    - Optimize code for faster execution
+
+5. **CORS Issues**
+   - API Gateway and FastAPI both have CORS configured
+   - Check browser network tab for CORS errors
 
 ### Debugging
 
@@ -119,7 +216,8 @@ aws logs get-log-events --log-group-name /aws/lambda/<function-name> --log-strea
    - Review recent log entries
 
 3. **Test Locally**
-   - Use `sam local start-api` for local development
+   - Run `uvicorn app:app --reload` for local development
+   - Run tests with `cd backend && pytest tests/`
 
 ## Security Considerations
 
