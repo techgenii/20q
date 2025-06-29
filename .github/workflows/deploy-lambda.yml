@@ -159,17 +159,27 @@ jobs:
             echo "Created API Gateway: $API_ID"
           fi
           
+          # Get account ID for Lambda ARN
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          LAMBDA_ARN="arn:aws:lambda:$REGION:$ACCOUNT_ID:function:$FUNCTION_NAME"
+          echo "Lambda ARN: $LAMBDA_ARN"
+          
           # Check if integration already exists
           EXISTING_INTEGRATION_ID=$(aws apigatewayv2 get-integrations --api-id $API_ID --query "Items[0].IntegrationId" --output text 2>/dev/null || echo "")
           
           if [ -n "$EXISTING_INTEGRATION_ID" ] && [ "$EXISTING_INTEGRATION_ID" != "None" ]; then
             echo "Using existing integration: $EXISTING_INTEGRATION_ID"
             INTEGRATION_ID=$EXISTING_INTEGRATION_ID
+            
+            # Update existing integration to ensure it's correct
+            echo "Updating existing integration..."
+            aws apigatewayv2 update-integration \
+              --api-id $API_ID \
+              --integration-id $INTEGRATION_ID \
+              --integration-uri $LAMBDA_ARN \
+              --payload-format-version 2.0
           else
             echo "Creating new integration..."
-            ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-            LAMBDA_ARN="arn:aws:lambda:$REGION:$ACCOUNT_ID:function:$FUNCTION_NAME"
-            
             INTEGRATION_ID=$(aws apigatewayv2 create-integration \
               --api-id $API_ID \
               --integration-type AWS_PROXY \
@@ -178,6 +188,10 @@ jobs:
               --query 'IntegrationId' --output text)
             echo "Created integration: $INTEGRATION_ID"
           fi
+
+          # Verify integration
+          echo "Verifying integration configuration..."
+          aws apigatewayv2 get-integration --api-id $API_ID --integration-id $INTEGRATION_ID
 
           # Create routes (these will be updated if they exist)
           echo "Setting up routes..."
@@ -221,6 +235,15 @@ jobs:
           echo "API_ENDPOINT=$ENDPOINT" >> $GITHUB_ENV
           echo "endpoint=$ENDPOINT" >> $GITHUB_OUTPUT
           echo "API Gateway configured successfully!"
+          echo "Endpoint: $ENDPOINT"
+          
+          # Show final API Gateway configuration
+          echo ""
+          echo "📋 API Gateway Configuration Summary:"
+          echo "API ID: $API_ID"
+          echo "Integration ID: $INTEGRATION_ID"
+          echo "Lambda ARN: $LAMBDA_ARN"
+          echo "Stage: $STAGE_NAME"
           echo "Endpoint: $ENDPOINT"
 
       - name: Post deployment test
