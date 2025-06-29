@@ -3,6 +3,7 @@ import { Trophy, Zap, Search, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, A
 import { LeaderboardEntry, User } from '@/types';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Avatar } from '@/components/ui/Avatar';
 
 interface LeaderboardScreenProps {
   leaderboard: LeaderboardEntry[];
@@ -323,9 +324,13 @@ export const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({
                       </div>
                     </div>
                     
-                    {/* Player Info */}
+                    {/* Player Info with Avatar */}
                     <div className="col-span-4">
                       <div className="flex items-center space-x-3">
+                        <Avatar 
+                          fullName={player.username} 
+                          size="md"
+                        />
                         <div>
                           <div className="font-bold text-gray-800 flex items-center space-x-2">
                             <span>{player.username}</span>

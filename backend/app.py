@@ -19,6 +19,7 @@ import io
 import os
 import logging
 from typing import Optional
+from datetime import datetime
 
 import requests
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
@@ -197,7 +198,7 @@ async def sign_up(user_data: UserSignUp):
                 "email": response.user.email,
                 "username": response.user.user_metadata.get("full_name"),
                 "avatar_url": None,
-                "last_login_at": None,
+                "last_login_at": response.user.created_at.isoformat(),
                 "bio": None,
                 "favorite_category": None,
                 "achievements": [],
@@ -236,7 +237,7 @@ async def sign_up(user_data: UserSignUp):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Registration failed: {str(e)}",
+            detail=f"User Registration failed: {str(e)}",
         )
 
 
@@ -257,7 +258,11 @@ async def login(user_credentials: UserLogin):
                 detail="Invalid email or password",
             )
 
-        # Create user response
+        # Update last_login_at to now
+        now_iso = datetime.now(datetime.UTC).isoformat()
+        get_supabase_client().table("players").update({"last_login_at": now_iso}).eq("id", response.user.id).execute()
+
+        # Fetch the updated player record
         player = (
             get_supabase_client()
             .table("players")
@@ -313,12 +318,35 @@ async def get_current_user_info(current_user=Depends(get_current_user)):
     """
     Get current user information
     """
-    return UserResponse(
-        id=current_user.id,
-        email=current_user.email,
-        full_name=current_user.user_metadata.get("full_name"),
-        created_at=current_user.created_at.isoformat(),
-    )
+    try:
+        # Fetch the complete player record from database
+        player = (
+            get_supabase_client()
+            .table("players")
+            .select("avatar_url, last_login_at, bio, favorite_category, achievements")
+            .eq("id", current_user.id)
+            .single()
+            .execute()
+            .data
+            or {}
+        )
+        
+        return UserResponse(
+            id=current_user.id,
+            email=current_user.email,
+            full_name=current_user.user_metadata.get("full_name"),
+            created_at=current_user.created_at.isoformat(),
+            avatar_url=player.get("avatar_url"),
+            last_login_at=player.get("last_login_at"),
+            bio=player.get("bio"),
+            favorite_category=player.get("favorite_category"),
+            achievements=player.get("achievements", []),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch user information: {str(e)}"
+        )
 
 
 @app.post("/auth/reset-password")

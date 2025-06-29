@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { User, Zap, Crown, Target, Clock, Trophy, ArrowRight, Edit3 } from 'lucide-react';
 import { User as UserType, GameHistory, ProfileScreenProps } from '@/types';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Avatar } from '@/components/ui/Avatar';
 import { VoiceSettings } from '@/components/voice/VoiceSettings';
+import { EditProfileScreen } from '@/components/screens/EditProfileScreen';
 import { formatDate } from '@/utils/formatters';
 import { getAchievementDetails, getRarityBadge } from '@/utils/achievementDetails';
 
@@ -12,8 +14,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   voiceEnabled,
   onToggleVoice,
   history = [],
-  onViewHistory
+  onViewHistory,
+  onUpdateUser
 }) => {
+  const [isEditing, setIsEditing] = useState(false);
+
   // Get the 5 most recent games for the activity feed
   const recentActivity = history.slice(0, 5);
 
@@ -24,8 +29,30 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const handleEditProfile = () => {
-    alert('Edit Profile functionality coming soon! This will allow you to update your avatar, username, and other profile settings.');
+    setIsEditing(true);
   };
+
+  const handleSaveProfile = (updatedUser: UserType) => {
+    // Update the user data in the parent component
+    onUpdateUser(updatedUser);
+    // Exit edit mode
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+  };
+
+  // If in edit mode, render the EditProfileScreen
+  if (isEditing) {
+    return (
+      <EditProfileScreen
+        user={user}
+        onSave={handleSaveProfile}
+        onCancel={handleCancelEdit}
+      />
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -37,18 +64,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <div className="relative bg-gradient-to-br from-purple-primary via-purple-primary to-pink-accent px-8 py-12">
               <div className="absolute inset-0 bg-black/10"></div>
               <div className="relative flex items-start space-x-6">
-                {/* Avatar Display */}
-                <div className="bg-white/20 backdrop-blur-lg rounded-2xl w-28 h-28 flex items-center justify-center border border-white/30 overflow-hidden">
-                  {user.avatar ? (
-                    <img 
-                      src={user.avatar} 
-                      alt={`${user.username}'s avatar`}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <User className="w-14 h-14 text-white" />
-                  )}
-                </div>
+                {/* Avatar Display with Initials Fallback */}
+                <Avatar 
+                  src={user.avatar_url} 
+                  fullName={user.full_name} 
+                  size="2xl"
+                  className="ring-4 ring-white/30"
+                />
                 <div className="text-white flex-1">
                   <div className="flex items-center space-x-3 mb-2">
                     <h1 className="font-display text-4xl font-bold">{user.username}</h1>

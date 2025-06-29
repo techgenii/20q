@@ -14,6 +14,30 @@ export interface User {
   gamesToday: number;
   averageQuestions: number;
   fastestWin: number;
+  // Add API fields
+  full_name: string;
+  created_at: string;
+  avatar_url: string;
+  last_login_at: string;
+  bio: string;
+}
+
+export interface ApiUser {
+  id: string;
+  email: string;
+  full_name: string;
+  created_at: string;
+  avatar_url: string;
+  last_login_at: string;
+  bio: string;
+  favorite_category: string;
+  achievements: string[];
+}
+
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  user: ApiUser;
 }
 
 export interface GameMessage {
@@ -77,6 +101,13 @@ export interface ProfileScreenProps {
   onToggleVoice: () => void;
   history?: GameHistory[];
   onViewHistory?: () => void;
+  onUpdateUser: (updatedUser: User) => void;
+}
+
+export interface EditProfileScreenProps {
+  user: User;
+  onSave: (updatedUser: User) => void;
+  onCancel: () => void;
 }
 
 export type Screen = 'login' | 'lobby' | 'game' | 'leaderboard' | 'history' | 'profile';

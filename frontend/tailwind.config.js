@@ -4,6 +4,10 @@ export default {
     content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
 	theme: {
 		extend: {
+			fontFamily: {
+				// Add Outfit font for initials
+				'initials': ['Outfit', 'sans-serif'],
+			},
 			colors: {
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
@@ -58,7 +62,9 @@ export default {
 				// Custom brand colors
 				'purple-primary': '#4b2471',
 				'pink-accent': '#c761bd',
-				'success-green': '#65dbbf'
+				'success-green': '#65dbbf',
+				// Custom initials background color
+				'initials-bg': '#c9c0e1'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

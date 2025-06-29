@@ -1,9 +1,16 @@
+# NOTE: This workflow expects all Lambda backend code (app.py, requirements.txt, etc.) to be in the 'backend' directory.
+# If you move your backend code, update the workflow paths accordingly.
+
 name: Deploy to Lambda
 
 on:
   push:
     branches:
       - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
 
 jobs:
   deploy:
