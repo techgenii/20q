@@ -41,6 +41,7 @@ jobs:
 
       - name: Build Lambda package
         run: |
+          cd backend
           rm -rf $BUILD_DIR $ZIP_FILE
           mkdir -p $BUILD_DIR
 
@@ -56,6 +57,7 @@ jobs:
 
       - name: Package deployment
         run: |
+          cd backend
           cd $BUILD_DIR
           zip -r9 ../$ZIP_FILE .
           cd ..
@@ -63,6 +65,7 @@ jobs:
 
       - name: Deploy Lambda Function
         run: |
+          cd backend
           # Create environment variables
           echo '{"Variables": $LAMBDA_ENV_VARS}' > env.json
           
