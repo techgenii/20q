@@ -160,15 +160,24 @@ jobs:
 
           # Create routes (these will be updated if they exist)
           echo "Setting up routes..."
+          
+          # Delete existing routes first to avoid conflicts
+          echo "Cleaning up existing routes..."
+          aws apigatewayv2 get-routes --api-id $API_ID --query "Items[?RouteKey=='ANY /'].RouteId" --output text | xargs -I {} aws apigatewayv2 delete-route --api-id $API_ID --route-id {} 2>/dev/null || echo "No existing ANY / route to delete"
+          aws apigatewayv2 get-routes --api-id $API_ID --query "Items[?RouteKey=='ANY /{proxy+}'].RouteId" --output text | xargs -I {} aws apigatewayv2 delete-route --api-id $API_ID --route-id {} 2>/dev/null || echo "No existing ANY /{proxy+} route to delete"
+          
+          # Create new routes
+          echo "Creating ANY / route..."
           aws apigatewayv2 create-route \
             --api-id $API_ID \
             --route-key "ANY /" \
-            --target "integrations/$INTEGRATION_ID" 2>/dev/null || echo "Route ANY / already exists"
+            --target "integrations/$INTEGRATION_ID"
             
+          echo "Creating ANY /{proxy+} route..."
           aws apigatewayv2 create-route \
             --api-id $API_ID \
             --route-key "ANY /{proxy+}" \
-            --target "integrations/$INTEGRATION_ID" 2>/dev/null || echo "Route ANY /{proxy+} already exists"
+            --target "integrations/$INTEGRATION_ID"
           
           # Create or update stage
           echo "Setting up stage..."
@@ -195,8 +204,42 @@ jobs:
 
       - name: Post deployment test
         run: |
-          echo "Testing API endpoint..."
-          # Test the root endpoint instead of /health
-          curl -s $API_ENDPOINT --max-time 10 || echo "API test failed (this is normal for the first deployment)"
-          echo "WhisperChase stage deployed successfully!"
-          echo "Access your API at: $API_ENDPOINT"
+          echo "Waiting 15 seconds for API Gateway to fully deploy..."
+          sleep 15
+          
+          echo "Testing API endpoints..."
+          
+          # Test the root endpoint
+          echo "Testing root endpoint..."
+          ROOT_RESPONSE=$(curl -s $API_ENDPOINT --max-time 10)
+          if [ $? -eq 0 ]; then
+            echo "✅ Root endpoint response: $ROOT_RESPONSE"
+            # Check if response contains expected message
+            if echo "$ROOT_RESPONSE" | grep -q "WhisperChase Game API"; then
+              echo "✅ Root endpoint working correctly!"
+            else
+              echo "⚠️  Root endpoint returned unexpected response"
+            fi
+          else
+            echo "❌ Root endpoint test failed"
+          fi
+          
+          # Test the health endpoint
+          echo "Testing health endpoint..."
+          HEALTH_RESPONSE=$(curl -s $API_ENDPOINT/health --max-time 10)
+          if [ $? -eq 0 ]; then
+            echo "✅ Health endpoint response: $HEALTH_RESPONSE"
+            # Check if response contains expected status
+            if echo "$HEALTH_RESPONSE" | grep -q '"status": "healthy"'; then
+              echo "✅ Health endpoint working correctly!"
+            else
+              echo "⚠️  Health endpoint returned unexpected response"
+            fi
+          else
+            echo "❌ Health endpoint test failed"
+          fi
+          
+          echo ""
+          echo "🎉 WhisperChase stage deployed successfully!"
+          echo "🌐 Access your API at: $API_ENDPOINT"
+          echo "🏥 Health check at: $API_ENDPOINT/health"
