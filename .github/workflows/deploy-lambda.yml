@@ -82,12 +82,26 @@ jobs:
           
           if aws lambda get-function --function-name $FUNCTION_NAME &>/dev/null; then
             echo "Updating existing function..."
+            
+            # Wait for function to be in Active state before updating
+            echo "Waiting for function to be ready for updates..."
+            aws lambda wait function-active --function-name $FUNCTION_NAME
+            
+            # Update function code first
             aws lambda update-function-code \
               --function-name $FUNCTION_NAME \
               --zip-file fileb://$ZIP_FILE
+            
+            # Wait for code update to complete
+            aws lambda wait function-updated --function-name $FUNCTION_NAME
+            
+            # Then update configuration
             aws lambda update-function-configuration \
               --function-name $FUNCTION_NAME \
               --environment file://env.json
+            
+            # Wait for configuration update to complete
+            aws lambda wait function-updated --function-name $FUNCTION_NAME
           else
             echo "Creating new function..."
             aws lambda create-function \
@@ -98,8 +112,12 @@ jobs:
               --architectures $ARCHITECTURE \
               --zip-file fileb://$ZIP_FILE \
               --environment file://env.json
+            
+            # Wait for function to be active
+            aws lambda wait function-active --function-name $FUNCTION_NAME
           fi
-          aws lambda wait function-updated --function-name $FUNCTION_NAME
+          
+          echo "Lambda function deployment completed successfully!"
         env:
           LAMBDA_ENV_VARS: ${{ secrets.LAMBDA_ENV_VARS || '{}' }}
 
