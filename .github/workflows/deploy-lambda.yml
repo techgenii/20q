@@ -1,4 +1,3 @@
-
 name: Deploy to Lambda
 
 on:
@@ -123,9 +122,10 @@ jobs:
           echo "Deploying Lambda function: $FUNCTION_NAME"
           
           # Parse environment variables from JSON format
-          if [ -n "${{ secrets.LAMBDA_ENV_VARS }}" ]; then
+          if [ -n "$LAMBDA_ENV_VARS" ]; then
             echo "Setting up environment variables..."
-            ENV_VARS='${{ secrets.LAMBDA_ENV_VARS }}'
+            # Compact the JSON to remove newlines and format properly for AWS CLI
+            ENV_VARS=$(echo "$LAMBDA_ENV_VARS" | jq -c .)
             echo "Environment variables configured: $(echo "$ENV_VARS" | jq -r 'keys | join(", ")')"
           else
             ENV_VARS='{}'
@@ -157,6 +157,8 @@ jobs:
           fi
 
           aws lambda wait function-active --function-name $FUNCTION_NAME
+        env:
+          LAMBDA_ENV_VARS: ${{ secrets.LAMBDA_ENV_VARS }}
 
       - name: Setup API Gateway
         run: |
