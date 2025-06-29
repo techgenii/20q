@@ -1,4 +1,4 @@
-name: Deploy to Lambda (ARM64)
+name: Deploy to Lambda
 
 on:
   push:
@@ -15,7 +15,7 @@ jobs:
       PYTHON_VERSION: 3.13
       HANDLER: app.handler
       RUNTIME: python3.13
-      ARCHITECTURE: arm64
+      ARCHITECTURE: x86_64
       STAGE_NAME: WhisperChase  # Custom stage name
       FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
       ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
@@ -31,7 +31,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          architecture: arm64
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -40,13 +39,13 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.REGION }}
 
-      - name: Build Lambda package (ARM64)
+      - name: Build Lambda package
         run: |
           rm -rf $BUILD_DIR $ZIP_FILE
           mkdir -p $BUILD_DIR
 
           pip install -r requirements.txt -t $BUILD_DIR \
-            --platform manylinux_2014_aarch64 \
+            --platform manylinux_2014_x86_64 \
             --only-binary=:all: \
             --no-cache-dir \
             --upgrade \
