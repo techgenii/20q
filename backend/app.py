@@ -39,7 +39,7 @@ from .game_logic import (
 )
 from .supabase_client import get_supabase_client, get_supabase_auth_client
 
-print("Lambda cold start: app.py loaded")
+print("Lambda cold start: app.py successfully loaded")
 
 # Initialize FastAPI app
 app = FastAPI(title="Whisper Chase: 20 Questions")
