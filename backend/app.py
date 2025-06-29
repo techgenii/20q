@@ -680,13 +680,19 @@ async def update_game_voice_settings(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Health check
+# Root Check
 @app.get("/")
 async def root():
         return {
-        "message": "20Q Game API with Authentication is running",
+        "message": "Hello from WhisperChase Game API with Auth on Lambda!",
         "status": "healthy",
         "version": "1.0.0"
     }
 
+# Health checks
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
+# Lambda handler
 handler = Mangum(app)

@@ -37,43 +37,19 @@ jobs:
 
       - name: Prepare build directory
         run: |
-          rm -rf $BUILD_DIR $ZIP_FILE venv
-          python -m venv venv
-          source venv/bin/activate
+          rm -rf $BUILD_DIR $ZIP_FILE
           mkdir -p $BUILD_DIR
-          
-          # Upgrade pip and install build tools
-          pip install --upgrade pip setuptools wheel
-          
-          # Install dependencies with platform-specific builds for Lambda
-          # Use --no-deps to avoid metadata issues, then install dependencies manually
+
+          # Install dependencies for Lambda
           pip install -r backend/requirements.txt -t $BUILD_DIR \
-            --platform manylinux2014_x86_64 \
-            --only-binary=:all: \
-            --upgrade \
-            --force-reinstall
-          
-          # Fix email-validator metadata issue specifically
-          pip install email-validator -t $BUILD_DIR \
-            --platform manylinux2014_x86_64 \
-            --only-binary=:all: \
-            --upgrade \
-            --force-reinstall \
-            --no-cache-dir
-          
-          # Copy application code
+            --platform manylinux2014_x86_64 --only-binary=:all: \
+            --upgrade --force-reinstall --no-cache-dir
+
+          # Copy application code and cleanup
           cp -r backend/. $BUILD_DIR/
-          
-          # Create a simple __init__.py in the root if it doesn't exist
           touch $BUILD_DIR/__init__.py
-          
-          # Remove unnecessary files to reduce package size but keep metadata
-          find $BUILD_DIR -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-          find $BUILD_DIR -type f -name "*.pyc" -delete 2>/dev/null || true
-          find $BUILD_DIR -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true
-          # Keep .dist-info directories for metadata
-          
-          deactivate
+          find $BUILD_DIR \( -name "__pycache__" -o -name "tests" \) -type d -exec rm -rf {} + 2>/dev/null || true
+          find $BUILD_DIR -name "*.pyc" -delete 2>/dev/null || true
 
       - name: Check build contents
         run: |
@@ -143,18 +119,17 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Deploy Lambda Function
+    - name: Deploy Lambda Function
         run: |
           echo "Deploying Lambda function: $FUNCTION_NAME"
           
-          # Check if function exists
-          set +e
-          FUNCTION_INFO=$(aws lambda get-function --function-name $FUNCTION_NAME 2>/dev/null)
-          FUNCTION_EXISTS=$?
-          set -e
-
-          if [ $FUNCTION_EXISTS -ne 0 ]; then
-            echo "Creating new Lambda function..."
+          if aws lambda get-function --function-name $FUNCTION_NAME &>/dev/null; then
+            echo "Updating existing function..."
+            aws lambda update-function-code --function-name $FUNCTION_NAME --zip-file fileb://lambda-deploy.zip
+            aws lambda wait function-updated --function-name $FUNCTION_NAME
+            aws lambda update-function-configuration --function-name $FUNCTION_NAME --timeout 30 --memory-size 128
+          else
+            echo "Creating new function..."
             aws lambda create-function \
               --function-name $FUNCTION_NAME \
               --runtime $RUNTIME \
@@ -162,35 +137,9 @@ jobs:
               --handler $HANDLER \
               --zip-file fileb://lambda-deploy.zip \
               --timeout 30 \
-              --memory-size 128 \
-              --environment Variables='{PYTHONPATH="/var/task:/var/runtime"}' \
-              --description "Deployed via GitHub Actions"
-          else
-            echo "Updating existing Lambda function..."
-            
-            # Get existing environment variables to preserve them
-            EXISTING_ENV=$(echo "$FUNCTION_INFO" | jq -r '.Configuration.Environment.Variables // {}')
-            echo "Preserving existing environment variables: $EXISTING_ENV"
-            
-            # Update function code first
-            aws lambda update-function-code \
-              --function-name $FUNCTION_NAME \
-              --zip-file fileb://lambda-deploy.zip
-              
-            # Wait for code update to complete
-            aws lambda wait function-updated --function-name $FUNCTION_NAME
-            
-            # Update function configuration while preserving existing env vars
-            UPDATED_ENV=$(echo "$EXISTING_ENV" | jq '. + {"PYTHONPATH": "/var/task:/var/runtime"}')
-            aws lambda update-function-configuration \
-              --function-name $FUNCTION_NAME \
-              --timeout 30 \
-              --memory-size 128 \
-              --environment Variables="$UPDATED_ENV"
+              --memory-size 128
           fi
-          
-          # Wait for the function to be active
-          echo "Waiting for function to be active..."
+
           aws lambda wait function-active --function-name $FUNCTION_NAME
 
       - name: Setup API Gateway
