@@ -48,7 +48,6 @@ app = FastAPI(title="Whisper Chase: 20 Questions")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Configure this properly for production
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -684,7 +683,10 @@ async def update_game_voice_settings(
 # Health check
 @app.get("/")
 async def root():
-    return {"message": "20Q Game API with Authentication is running"}
-
+        return {
+        "message": "20Q Game API with Authentication is running",
+        "status": "healthy",
+        "version": "1.0.0"
+    }
 
 handler = Mangum(app)
