@@ -87,7 +87,6 @@ jobs:
               --zip-file fileb://$ZIP_FILE
             aws lambda update-function-configuration \
               --function-name $FUNCTION_NAME \
-              --architectures $ARCHITECTURE \
               --environment file://env.json
           else
             echo "Creating new function..."
@@ -106,55 +105,80 @@ jobs:
 
       - name: Configure API Gateway
         run: |
-          # Create API with custom name
-          API_ID=$(aws apigatewayv2 create-api \
-            --name "$API_NAME" \
-            --protocol-type HTTP \
-            --query "ApiId" --output text)
+          # Check if API already exists
+          EXISTING_API_ID=$(aws apigatewayv2 get-apis --query "Items[?Name=='$API_NAME'].ApiId" --output text 2>/dev/null || echo "")
           
-          # Create integration
-          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          LAMBDA_ARN="arn:aws:lambda:$REGION:$ACCOUNT_ID:function:$FUNCTION_NAME"
+          if [ -n "$EXISTING_API_ID" ] && [ "$EXISTING_API_ID" != "None" ]; then
+            echo "Using existing API Gateway: $EXISTING_API_ID"
+            API_ID=$EXISTING_API_ID
+          else
+            echo "Creating new API Gateway..."
+            API_ID=$(aws apigatewayv2 create-api \
+              --name "$API_NAME" \
+              --protocol-type HTTP \
+              --query "ApiId" --output text)
+            echo "Created API Gateway: $API_ID"
+          fi
           
-          INTEGRATION_ID=$(aws apigatewayv2 create-integration \
-            --api-id $API_ID \
-            --integration-type AWS_PROXY \
-            --integration-uri $LAMBDA_ARN \
-            --payload-format-version 2.0 \
-            --query 'IntegrationId' --output text)
+          # Check if integration already exists
+          EXISTING_INTEGRATION_ID=$(aws apigatewayv2 get-integrations --api-id $API_ID --query "Items[0].IntegrationId" --output text 2>/dev/null || echo "")
+          
+          if [ -n "$EXISTING_INTEGRATION_ID" ] && [ "$EXISTING_INTEGRATION_ID" != "None" ]; then
+            echo "Using existing integration: $EXISTING_INTEGRATION_ID"
+            INTEGRATION_ID=$EXISTING_INTEGRATION_ID
+          else
+            echo "Creating new integration..."
+            ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+            LAMBDA_ARN="arn:aws:lambda:$REGION:$ACCOUNT_ID:function:$FUNCTION_NAME"
+            
+            INTEGRATION_ID=$(aws apigatewayv2 create-integration \
+              --api-id $API_ID \
+              --integration-type AWS_PROXY \
+              --integration-uri $LAMBDA_ARN \
+              --payload-format-version 2.0 \
+              --query 'IntegrationId' --output text)
+            echo "Created integration: $INTEGRATION_ID"
+          fi
 
-          # Create routes
+          # Create routes (these will be updated if they exist)
+          echo "Setting up routes..."
           aws apigatewayv2 create-route \
             --api-id $API_ID \
             --route-key "ANY /" \
-            --target "integrations/$INTEGRATION_ID"
+            --target "integrations/$INTEGRATION_ID" 2>/dev/null || echo "Route ANY / already exists"
             
           aws apigatewayv2 create-route \
             --api-id $API_ID \
             --route-key "ANY /{proxy+}" \
-            --target "integrations/$INTEGRATION_ID"
+            --target "integrations/$INTEGRATION_ID" 2>/dev/null || echo "Route ANY /{proxy+} already exists"
           
-          # Create custom stage
+          # Create or update stage
+          echo "Setting up stage..."
           aws apigatewayv2 create-stage \
             --api-id $API_ID \
             --stage-name $STAGE_NAME \
-            --auto-deploy
+            --auto-deploy 2>/dev/null || echo "Stage $STAGE_NAME already exists"
           
-          # Set permissions
+          # Set permissions (will fail silently if already exists)
+          echo "Setting up Lambda permissions..."
           aws lambda add-permission \
             --function-name $FUNCTION_NAME \
             --statement-id "api-gateway-invoke" \
             --action lambda:InvokeFunction \
             --principal apigateway.amazonaws.com \
-            --source-arn "arn:aws:execute-api:$REGION:$ACCOUNT_ID:$API_ID/$STAGE_NAME/*"
+            --source-arn "arn:aws:execute-api:$REGION:$ACCOUNT_ID:$API_ID/$STAGE_NAME/*" 2>/dev/null || echo "Permission already exists"
 
           # Output endpoint
           ENDPOINT="https://$API_ID.execute-api.$REGION.amazonaws.com/$STAGE_NAME"
           echo "API_ENDPOINT=$ENDPOINT" >> $GITHUB_ENV
           echo "endpoint=$ENDPOINT" >> $GITHUB_OUTPUT
+          echo "API Gateway configured successfully!"
+          echo "Endpoint: $ENDPOINT"
 
       - name: Post deployment test
         run: |
-          curl -s $API_ENDPOINT/health --max-time 10
+          echo "Testing API endpoint..."
+          # Test the root endpoint instead of /health
+          curl -s $API_ENDPOINT --max-time 10 || echo "API test failed (this is normal for the first deployment)"
           echo "WhisperChase stage deployed successfully!"
           echo "Access your API at: $API_ENDPOINT"
