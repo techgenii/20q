@@ -146,12 +146,12 @@ jobs:
             --statement-id "api-gateway-invoke" \
             --action lambda:InvokeFunction \
             --principal apigateway.amazonaws.com \
-            --source-arn "arn:aws:execute-api:$REGION:$ACCOUNT_ID:$API_ID/*/*/*"
+            --source-arn "arn:aws:execute-api:$REGION:$ACCOUNT_ID:$API_ID/$STAGE_NAME/*"
 
           # Output endpoint
           ENDPOINT="https://$API_ID.execute-api.$REGION.amazonaws.com/$STAGE_NAME"
           echo "API_ENDPOINT=$ENDPOINT" >> $GITHUB_ENV
-          echo "::set-output name=endpoint::$ENDPOINT"
+          echo "endpoint=$ENDPOINT" >> $GITHUB_OUTPUT
 
       - name: Post deployment test
         run: |
