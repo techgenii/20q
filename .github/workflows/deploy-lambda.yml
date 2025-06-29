@@ -100,9 +100,26 @@ jobs:
             API_ID=$(aws apigatewayv2 create-api \
               --name "$API_GATEWAY_NAME" \
               --protocol-type HTTP \
-              --target arn:aws:lambda:$REGION:$ACCOUNT_ID:function:$FUNCTION_NAME \
               --query "ApiId" --output text)
           fi
+
+          echo "Creating default route for API Gateway..."
+          INTEGRATION_ID=$(aws apigatewayv2 create-integration \
+            --api-id $API_ID \
+            --integration-type AWS_PROXY \
+            --integration-uri arn:aws:lambda:$REGION:$ACCOUNT_ID:function:$FUNCTION_NAME \
+            --payload-format-version 2.0 \
+            --query 'IntegrationId' --output text)
+
+          aws apigatewayv2 create-route \
+            --api-id $API_ID \
+            --route-key "ANY /" \
+            --target integrations/$INTEGRATION_ID
+
+          aws apigatewayv2 create-stage \
+            --api-id $API_ID \
+            --stage-name '$default' \
+            --auto-deploy
 
           aws lambda add-permission \
             --function-name $FUNCTION_NAME \
@@ -113,6 +130,7 @@ jobs:
             || echo "Permission already exists."
 
           echo "https://$API_ID.execute-api.$REGION.amazonaws.com/"
+
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
