@@ -42,8 +42,8 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
-          ELEVENLABS_VOICE_ID= ${{ env.ELEVENLABS_API_KEY }}  # Optional, uses default voice
-          ELEVENLABS_BASE_URL = ${{ env.ELEVENLABS_API_KEY }}
+          ELEVENLABS_VOICE_ID: ${{ env.ELEVENLABS_VOICE_ID }}
+          ELEVENLABS_BASE_URL: ${{ env.ELEVENLABS_BASE_URL }}
         run: |
           pip install -r requirements.txt
           pip install pytest
