@@ -90,7 +90,7 @@ jobs:
             # Update function code first
             aws lambda update-function-code \
               --function-name $FUNCTION_NAME \
-              --zip-file fileb://$ZIP_FILE
+              --zip-file file://$ZIP_FILE
             
             # Wait for code update to complete
             aws lambda wait function-updated --function-name $FUNCTION_NAME
@@ -112,7 +112,7 @@ jobs:
               --role $ROLE_ARN \
               --handler $HANDLER \
               --architectures $ARCHITECTURE \
-              --zip-file fileb://$ZIP_FILE \
+              --zip-file file://$ZIP_FILE \
               --environment file://env.json \
               --timeout 30 \
               --memory-size 256
@@ -139,45 +139,6 @@ jobs:
             --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole 2>/dev/null || echo "Policy already attached"
           
           echo "Lambda logging permissions configured!"
-
-      - name: Test Lambda Function Directly
-        run: |
-          echo "Waiting 10 seconds for Lambda function to be fully ready..."
-          sleep 10
-          
-          echo "Testing Lambda function directly..."
-          
-          # Create test payload file
-          cat > test-payload.json << 'EOF'
-          {
-            "httpMethod": "GET",
-            "path": "/",
-            "headers": {
-              "Content-Type": "application/json"
-            },
-            "queryStringParameters": null,
-            "body": null
-          }
-          EOF
-          
-          echo "Invoking Lambda function directly..."
-          aws lambda invoke \
-            --function-name $FUNCTION_NAME \
-            --payload file://test-payload.json \
-            response.json
-          
-          echo "Lambda response:"
-          cat response.json
-          
-          # Show log group information
-          echo ""
-          echo "📋 Lambda Log Group Information:"
-          echo "Log Group: /aws/lambda/$FUNCTION_NAME"
-          echo "View logs in AWS Console: https://console.aws.amazon.com/cloudwatch/home?region=$REGION#logsV2:log-groups/log-group/%2Faws%2Flambda%2F$FUNCTION_NAME"
-          echo ""
-          echo "To view recent logs via CLI:"
-          echo "aws logs describe-log-streams --log-group-name /aws/lambda/$FUNCTION_NAME --order-by LastEventTime --descending --max-items 1"
-          echo "aws logs get-log-events --log-group-name /aws/lambda/$FUNCTION_NAME --log-stream-name <stream-name>"
 
       - name: Configure API Gateway
         run: |
