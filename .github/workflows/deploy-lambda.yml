@@ -66,11 +66,22 @@ jobs:
       - name: Deploy Lambda Function
         run: |
           cd backend
-          # Create environment variables
-          echo '{"Variables": $LAMBDA_ENV_VARS}' > env.json
           
-          if aws lambda get-function --function-name $FUNCTION_NAME; then
-            # Update existing
+          # Handle environment variables properly
+          if [ -n "$LAMBDA_ENV_VARS" ] && [ "$LAMBDA_ENV_VARS" != "{}" ]; then
+            # If LAMBDA_ENV_VARS is provided, use it directly
+            echo "$LAMBDA_ENV_VARS" > env.json
+          else
+            # Create empty environment variables
+            echo '{"Variables": {}}' > env.json
+          fi
+          
+          # Debug: show what we're creating
+          echo "Environment configuration:"
+          cat env.json
+          
+          if aws lambda get-function --function-name $FUNCTION_NAME &>/dev/null; then
+            echo "Updating existing function..."
             aws lambda update-function-code \
               --function-name $FUNCTION_NAME \
               --zip-file fileb://$ZIP_FILE
@@ -79,7 +90,7 @@ jobs:
               --architectures $ARCHITECTURE \
               --environment file://env.json
           else
-            # Create new
+            echo "Creating new function..."
             aws lambda create-function \
               --function-name $FUNCTION_NAME \
               --runtime $RUNTIME \
