@@ -98,7 +98,9 @@ jobs:
             # Then update configuration
             aws lambda update-function-configuration \
               --function-name $FUNCTION_NAME \
-              --environment file://env.json
+              --environment file://env.json \
+              --timeout 30 \
+              --memory-size 256
             
             # Wait for configuration update to complete
             aws lambda wait function-updated --function-name $FUNCTION_NAME
@@ -111,7 +113,9 @@ jobs:
               --handler $HANDLER \
               --architectures $ARCHITECTURE \
               --zip-file fileb://$ZIP_FILE \
-              --environment file://env.json
+              --environment file://env.json \
+              --timeout 30 \
+              --memory-size 256
             
             # Wait for function to be active
             aws lambda wait function-active --function-name $FUNCTION_NAME
@@ -120,6 +124,55 @@ jobs:
           echo "Lambda function deployment completed successfully!"
         env:
           LAMBDA_ENV_VARS: ${{ secrets.LAMBDA_ENV_VARS || '{}' }}
+
+      - name: Configure Lambda Logging Permissions
+        run: |
+          echo "Ensuring Lambda has CloudWatch logging permissions..."
+          
+          # Get the Lambda function's role name
+          ROLE_NAME=$(aws lambda get-function --function-name $FUNCTION_NAME --query 'Configuration.Role' --output text | cut -d'/' -f2)
+          echo "Lambda role: $ROLE_NAME"
+          
+          # Attach CloudWatch Logs policy if not already attached
+          aws iam attach-role-policy \
+            --role-name $ROLE_NAME \
+            --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole 2>/dev/null || echo "Policy already attached"
+          
+          echo "Lambda logging permissions configured!"
+
+      - name: Test Lambda Function Directly
+        run: |
+          echo "Testing Lambda function directly..."
+          
+          # Test payload for the root endpoint
+          TEST_PAYLOAD='{
+            "httpMethod": "GET",
+            "path": "/",
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "queryStringParameters": null,
+            "body": null
+          }'
+          
+          echo "Invoking Lambda function directly..."
+          aws lambda invoke \
+            --function-name $FUNCTION_NAME \
+            --payload "$TEST_PAYLOAD" \
+            response.json
+          
+          echo "Lambda response:"
+          cat response.json
+          
+          # Show log group information
+          echo ""
+          echo "📋 Lambda Log Group Information:"
+          echo "Log Group: /aws/lambda/$FUNCTION_NAME"
+          echo "View logs in AWS Console: https://console.aws.amazon.com/cloudwatch/home?region=$REGION#logsV2:log-groups/log-group/%2Faws%2Flambda%2F$FUNCTION_NAME"
+          echo ""
+          echo "To view recent logs via CLI:"
+          echo "aws logs describe-log-streams --log-group-name /aws/lambda/$FUNCTION_NAME --order-by LastEventTime --descending --max-items 1"
+          echo "aws logs get-log-events --log-group-name /aws/lambda/$FUNCTION_NAME --log-stream-name <stream-name>"
 
       - name: Configure API Gateway
         run: |

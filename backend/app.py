@@ -17,6 +17,7 @@
 
 import io
 import os
+import logging
 from typing import Optional
 
 import requests
@@ -30,7 +31,11 @@ from pydantic import BaseModel, EmailStr
 from game_logic import ask_openai_question, get_game, increment_questions_asked, join_game, make_guess, record_question, start_game, get_remaining_slots
 from supabase_client import get_supabase_client, get_supabase_auth_client
 
-print("Lambda cold start: app.py successfully loaded")
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+logger.info("Lambda cold start: app.py successfully loaded")
 
 # Initialize FastAPI app
 app = FastAPI(title="Whisper Chase: 20 Questions")
@@ -674,7 +679,8 @@ async def update_game_voice_settings(
 # Root Check
 @app.get("/")
 async def root():
-        return {
+    logger.info("Root endpoint called")
+    return {
         "message": "Hello from WhisperChase Game API with Auth on Lambda!",
         "status": "healthy",
         "version": "1.0.0"
@@ -683,7 +689,21 @@ async def root():
 # Health checks
 @app.get("/health")
 def health_check():
+    logger.info("Health endpoint called")
     return {"status": "healthy"}
 
-# Lambda handler
-handler = Mangum(app)
+# Lambda handler with enhanced logging
+def handler(event, context):
+    logger.info(f"Lambda invoked with event: {event}")
+    
+    try:
+        # Use Mangum to handle the FastAPI app
+        mangum_handler = Mangum(app)
+        response = mangum_handler(event, context)
+        logger.info(f"Lambda response: {response}")
+        print(f"Lambda response: {response}")
+        return response
+    except Exception as e:
+        logger.error(f"Lambda handler error: {str(e)}")
+        print(f"Lambda handler error: {str(e)}")
+        raise
