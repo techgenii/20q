@@ -1,66 +1,16 @@
-name: Test & Deploy Backend to AWS Lambda + API Gateway
+name: Deploy to Lambda
 
 on:
-  push:
-    paths:
-      - "backend/**"
-      - ".github/workflows/deploy-lambda.yml"
-    branches:
-      - main
+  workflow_run:
+    workflows: ["Test Backend"]
+    types:
+      - completed
   workflow_dispatch:
 
 jobs:
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.13
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: Install and run tests
-        working-directory: backend
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
-          ELEVENLABS_VOICE_ID: ${{ vars.ELEVENLABS_VOICE_ID }}
-          ELEVENLABS_BASE_URL: ${{ vars.ELEVENLABS_BASE_URL }}
-        run: |
-          pip install -r requirements.txt
-          pip install pytest pytest-cov
-          pytest --junitxml=results.xml --cov=. --cov-report=xml --cov-report=html
-      - name: Upload pytest results
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest-results
-          path: backend/results.xml
-      - name: Upload coverage report (XML)
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report-xml
-          path: backend/coverage.xml
-      - name: Upload coverage report (HTML)
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report-html
-          path: backend/htmlcov/
-
   deploy-code:
-    name: Deploy Lambda Code
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    needs: test
     env:
       ZIP_FILE: lambda-deploy.zip
       BUILD_DIR: build
@@ -71,77 +21,53 @@ jobs:
       ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
       REGION: ${{ secrets.AWS_REGION }}
       API_GATEWAY_NAME: ${{ secrets.API_GATEWAY_NAME || 'MyAPI' }}
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: Cache pip
-        uses: actions/cache@v4
+
+      - uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: List workspace contents
-        run: ls -l
-      - name: List backend directory contents
-        run: ls -l backend/
+
       - name: Prepare build directory
         run: |
           rm -rf $BUILD_DIR $ZIP_FILE venv
-          mkdir -p $BUILD_DIR
-          cp -r backend/* $BUILD_DIR/
           python -m venv venv
           source venv/bin/activate
+          mkdir -p $BUILD_DIR
           pip install -r backend/requirements.txt -t $BUILD_DIR
+          cp -r backend/. $BUILD_DIR/
           deactivate
-      - name: List build directory contents after copy
-        run: ls -l $BUILD_DIR
-      - name: Check if build directory and app.py exist
+
+      - name: Check build contents
         run: |
-          if [ ! -d "$BUILD_DIR" ]; then
-            echo "❌ ERROR: build directory does not exist!"
-            exit 1
-          fi
           if [ ! -f "$BUILD_DIR/app.py" ]; then
-            echo "❌ ERROR: app.py is not at the root of the build directory!"
-            ls -l $BUILD_DIR
+            echo "❌ app.py not at root of build dir!"
             exit 1
-          else
-            echo "✅ app.py is at the root of the build directory."
           fi
-      - name: Build Lambda Code
+
+      - name: Zip Lambda package
         run: |
-          rm -rf $ZIP_FILE
           cd $BUILD_DIR
           zip -r ../$ZIP_FILE .
           cd ..
-      - name: List contents of Lambda deployment zip
-        run: |
-          unzip -l lambda-deploy.zip
-          if unzip -l lambda-deploy.zip | grep -q '^ *[0-9]\+ +[0-9\-]+ +[0-9\:]+ +app.py$'; then
-            echo "✅ app.py is present at the root of the zip."
-          else
-            echo "❌ ERROR: app.py is NOT present at the root of the zip!"
-            exit 1
-          fi
-      - name: Upload Lambda package
-        uses: actions/upload-artifact@v4
+
+      - uses: actions/upload-artifact@v4
         with:
           name: lambda-deploy
-          path: lambda-deploy.zip
+          path: $ZIP_FILE
 
-      - name: Deploy Lambda code and set up API Gateway
+      - name: Deploy Lambda & API Gateway
         run: |
-          # Configure AWS credentials
           aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws configure set region ${{ env.REGION }}
+          aws configure set region $REGION
 
-          # Check if Lambda function exists
           set +e
           aws lambda get-function --function-name $FUNCTION_NAME > /dev/null 2>&1
           EXISTS=$?
@@ -154,63 +80,32 @@ jobs:
               --role $ROLE_ARN \
               --handler $HANDLER \
               --zip-file fileb://$ZIP_FILE
-            echo "✅ Lambda function created successfully."
           else
             aws lambda update-function-code \
               --function-name $FUNCTION_NAME \
               --zip-file fileb://$ZIP_FILE
-            echo "✅ Lambda function code updated successfully."
           fi
 
-          # Set up API Gateway
-          echo "Checking for existing API Gateway..."
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           API_ID=$(aws apigatewayv2 get-apis --query "Items[?Name=='$API_GATEWAY_NAME'].ApiId" --output text)
+
           if [ -z "$API_ID" ]; then
-            echo "Creating new HTTP API..."
             API_ID=$(aws apigatewayv2 create-api \
               --name "$API_GATEWAY_NAME" \
               --protocol-type HTTP \
               --target arn:aws:lambda:$REGION:$ACCOUNT_ID:function:$FUNCTION_NAME \
               --query "ApiId" --output text)
-            echo "Created API Gateway: $API_ID"
-          else
-            echo "API Gateway already exists: $API_ID"
           fi
-          echo "Adding Lambda invoke permissions..."
+
           aws lambda add-permission \
             --function-name $FUNCTION_NAME \
             --statement-id apigateway-access \
             --action lambda:InvokeFunction \
             --principal apigateway.amazonaws.com \
             --source-arn arn:aws:execute-api:$REGION:$ACCOUNT_ID:$API_ID/*/*/ \
-            || echo "Permission already exists. Continuing..."
-          echo "🚀 Your API Gateway endpoint (after deployment):"
-          echo "https://$API_ID.execute-api.$REGION.amazonaws.com/"
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+            || echo "Permission already exists."
 
-  update-env:
-    name: Update Lambda Environment Variables
-    runs-on: ubuntu-latest
-    needs: deploy-code
-    steps:
-      - name: Wait for Lambda code update to complete
-        run: sleep 60
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-      - name: Update Lambda environment variables
-        run: |
-          aws lambda update-function-configuration \
-            --function-name ${{ secrets.FUNCTION_NAME }} \
-            --environment "Variables={SUPABASE_URL=${{ secrets.SUPABASE_URL }},SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }},SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},ELEVENLABS_API_KEY=${{ secrets.ELEVENLABS_API_KEY }},ELEVENLABS_VOICE_ID=${{ vars.ELEVENLABS_VOICE_ID }},ELEVENLABS_BASE_URL=${{ vars.ELEVENLABS_BASE_URL }}}"
-          echo "✅ Lambda environment variables updated successfully."
+          echo "https://$API_ID.execute-api.$REGION.amazonaws.com/"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
