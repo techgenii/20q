@@ -16,7 +16,7 @@ jobs:
       HANDLER: app.handler
       RUNTIME: python3.13
       ARCHITECTURE: x86_64
-      STAGE_NAME: WhisperChase  # Custom stage name
+      STAGE_NAME: '$default'  # Use default stage for root URL
       FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
       ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
       REGION: ${{ secrets.AWS_REGION }}
@@ -218,8 +218,8 @@ jobs:
           echo "Setting up stage..."
           aws apigatewayv2 create-stage \
             --api-id $API_ID \
-            --stage-name $STAGE_NAME \
-            --auto-deploy 2>/dev/null || echo "Stage $STAGE_NAME already exists"
+            --stage-name '$default' \
+            --auto-deploy 2>/dev/null || echo "Stage $default already exists"
           
           # Set permissions (will fail silently if already exists)
           echo "Setting up Lambda permissions..."
@@ -228,10 +228,10 @@ jobs:
             --statement-id "api-gateway-invoke" \
             --action lambda:InvokeFunction \
             --principal apigateway.amazonaws.com \
-            --source-arn "arn:aws:execute-api:$REGION:$ACCOUNT_ID:$API_ID/$STAGE_NAME/*" 2>/dev/null || echo "Permission already exists"
+            --source-arn "arn:aws:execute-api:$REGION:$ACCOUNT_ID:$API_ID/*/*/*" 2>/dev/null || echo "Permission already exists"
 
-          # Output endpoint
-          ENDPOINT="https://$API_ID.execute-api.$REGION.amazonaws.com/$STAGE_NAME"
+          # Output endpoint (no stage in URL)
+          ENDPOINT="https://$API_ID.execute-api.$REGION.amazonaws.com"
           echo "API_ENDPOINT=$ENDPOINT" >> $GITHUB_ENV
           echo "endpoint=$ENDPOINT" >> $GITHUB_OUTPUT
           echo "API Gateway configured successfully!"
@@ -243,7 +243,7 @@ jobs:
           echo "API ID: $API_ID"
           echo "Integration ID: $INTEGRATION_ID"
           echo "Lambda ARN: $LAMBDA_ARN"
-          echo "Stage: $STAGE_NAME"
+          echo "Stage: $default (root URL)"
           echo "Endpoint: $ENDPOINT"
 
       - name: Post deployment test
