@@ -101,6 +101,34 @@ jobs:
           else
             echo "✅ app.py is at the root of the build directory."
           fi
+      - name: List workspace contents
+        run: ls -l
+      - name: List backend directory contents
+        run: ls -l backend/
+      - name: Prepare build directory
+        run: |
+          rm -rf $BUILD_DIR $ZIP_FILE venv
+          mkdir -p $BUILD_DIR
+          cp -r backend/* $BUILD_DIR/
+          python -m venv venv
+          source venv/bin/activate
+          pip install -r backend/requirements.txt -t $BUILD_DIR
+          deactivate
+      - name: List build directory contents after copy
+        run: ls -l $BUILD_DIR
+      - name: Check if build directory and app.py exist
+        run: |
+          if [ ! -d "$BUILD_DIR" ]; then
+            echo "❌ ERROR: build directory does not exist!"
+            exit 1
+          fi
+          if [ ! -f "$BUILD_DIR/app.py" ]; then
+            echo "❌ ERROR: app.py is not at the root of the build directory!"
+            ls -l $BUILD_DIR
+            exit 1
+          else
+            echo "✅ app.py is at the root of the build directory."
+          fi
       - name: Build Lambda Code
         run: |
           rm -rf $ZIP_FILE
