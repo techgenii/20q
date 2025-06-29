@@ -10,30 +10,27 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
-    name: Test, Package & Deploy
+  test:
+    name: Run Tests
     runs-on: ubuntu-latest
-
-    env:
-      ZIP_FILE: lambda-deploy.zip
-      BUILD_DIR: build
-      PYTHON_VERSION: 3.13
-      HANDLER: app.handler
-      RUNTIME: python3.13
-      FUNCTION_NAME: ${{ secrets.FUNCTION_NAME }}
-      ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
-      REGION: ${{ secrets.AWS_REGION }}
-      API_GATEWAY_NAME: ${{ secrets.API_GATEWAY_NAME || 'MyAPI' }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
+          python-version: 3.13
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Lint with flake8
+        run: |
+          pip install flake8
+          flake8 backend/
       - name: Install and run tests
         working-directory: backend
         env:
@@ -49,61 +46,103 @@ jobs:
           pip install pytest
           pytest tests
 
-      - name: Build Lambda deployment package
+  deploy-code:
+    name: Deploy Lambda Code
+    runs-on: ubuntu-latest
+    needs: test
+    env:
+      ZIP_FILE: lambda-deploy.zip
+      BUILD_DIR: build
+      PYTHON_VERSION: 3.13
+      HANDLER: app.handler
+      RUNTIME: python3.13
+      FUNCTION_NAME: ${{ secrets.FUNCTION_NAME }}
+      ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
+      REGION: ${{ secrets.AWS_REGION }}
+      API_GATEWAY_NAME: ${{ secrets.API_GATEWAY_NAME || 'MyAPI' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Move backend files to build root if needed
         run: |
-          rm -rf $BUILD_DIR $ZIP_FILE venv
-          mkdir -p $BUILD_DIR
-          cp -r backend/* $BUILD_DIR/
-
-          python -m venv venv
-          source venv/bin/activate
-          pip install -r backend/requirements.txt -t $BUILD_DIR
-          deactivate
-
+          if [ -f "$BUILD_DIR/backend/app.py" ]; then
+            echo "Moving backend/* to build root..."
+            mv $BUILD_DIR/backend/* $BUILD_DIR/
+            rmdir $BUILD_DIR/backend
+          fi
+      - name: Check if app.py is at the root of build directory
+        run: |
+          if [ ! -f "$BUILD_DIR/app.py" ]; then
+            echo "❌ ERROR: app.py is not at the root of the build directory!"
+            ls -l $BUILD_DIR
+            exit 1
+          else
+            echo "✅ app.py is at the root of the build directory."
+          fi
+      - name: Build Lambda Code
+        run: |
+          rm -rf $ZIP_FILE
           cd $BUILD_DIR
           zip -r ../$ZIP_FILE .
           cd ..
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.REGION }}
-
-      - name: Check if Lambda function exists
-        id: check_lambda
+      - name: List contents of Lambda deployment zip
         run: |
+          unzip -l lambda-deploy.zip
+          if unzip -l lambda-deploy.zip | grep -q '^ *[0-9]\+ +[0-9\-]+ +[0-9\:]+ +app.py$'; then
+            echo "✅ app.py is present at the root of the zip."
+          else
+            echo "❌ ERROR: app.py is NOT present at the root of the zip!"
+            exit 1
+          fi
+      - name: Upload Lambda package
+        uses: actions/upload-artifact@v4
+        with:
+          name: lambda-deploy
+          path: lambda-deploy.zip
+
+      - name: Deploy Lambda code and set up API Gateway
+        run: |
+          # Configure AWS credentials
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws configure set region ${{ env.REGION }}
+
+          # Check if Lambda function exists
           set +e
           aws lambda get-function --function-name $FUNCTION_NAME > /dev/null 2>&1
-          echo "exists=$?" >> $GITHUB_OUTPUT
+          EXISTS=$?
           set -e
 
-      - name: Create Lambda function (if missing)
-        if: steps.check_lambda.outputs.exists != '0'
-        run: |
-          aws lambda create-function \
-            --function-name $FUNCTION_NAME \
-            --runtime $RUNTIME \
-            --role $ROLE_ARN \
-            --handler $HANDLER \
-            --zip-file fileb://$ZIP_FILE
-          echo "✅ Lambda function created successfully."
+          if [ $EXISTS -ne 0 ]; then
+            aws lambda create-function \
+              --function-name $FUNCTION_NAME \
+              --runtime $RUNTIME \
+              --role $ROLE_ARN \
+              --handler $HANDLER \
+              --zip-file fileb://$ZIP_FILE
+            echo "✅ Lambda function created successfully."
+          else
+            aws lambda update-function-code \
+              --function-name $FUNCTION_NAME \
+              --zip-file fileb://$ZIP_FILE
+            echo "✅ Lambda function code updated successfully."
+          fi
 
-      - name: Update Lambda function code
-        if: steps.check_lambda.outputs.exists == '0'
-        run: |
-          aws lambda update-function-code \
-            --function-name $FUNCTION_NAME \
-            --zip-file fileb://$ZIP_FILE
-          echo "✅ Lambda function code updated successfully."
-
-      - name: Set up API Gateway
-        run: |
+          # Set up API Gateway
           echo "Checking for existing API Gateway..."
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           API_ID=$(aws apigatewayv2 get-apis --query "Items[?Name=='$API_GATEWAY_NAME'].ApiId" --output text)
-
           if [ -z "$API_ID" ]; then
             echo "Creating new HTTP API..."
             API_ID=$(aws apigatewayv2 create-api \
@@ -111,12 +150,10 @@ jobs:
               --protocol-type HTTP \
               --target arn:aws:lambda:$REGION:$ACCOUNT_ID:function:$FUNCTION_NAME \
               --query "ApiId" --output text)
-
             echo "Created API Gateway: $API_ID"
           else
             echo "API Gateway already exists: $API_ID"
           fi
-
           echo "Adding Lambda invoke permissions..."
           aws lambda add-permission \
             --function-name $FUNCTION_NAME \
@@ -125,10 +162,26 @@ jobs:
             --principal apigateway.amazonaws.com \
             --source-arn arn:aws:execute-api:$REGION:$ACCOUNT_ID:$API_ID/*/*/ \
             || echo "Permission already exists. Continuing..."
-
           echo "🚀 Your API Gateway endpoint (after deployment):"
           echo "https://$API_ID.execute-api.$REGION.amazonaws.com/"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
 
+  update-env:
+    name: Update Lambda Environment Variables
+    runs-on: ubuntu-latest
+    needs: deploy-code
+    steps:
+      - name: Wait for Lambda code update to complete
+        run: sleep 60
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
       - name: Update Lambda environment variables
         run: |
           aws lambda update-function-configuration \
