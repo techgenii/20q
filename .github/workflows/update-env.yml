@@ -1,4 +1,4 @@
-name: Update Lambda Env Vars
+name: Step 3: Update Lambda Env Vars
 
 on:
   workflow_run:
