@@ -42,17 +42,36 @@ jobs:
           source venv/bin/activate
           mkdir -p $BUILD_DIR
           
+          # Upgrade pip and install build tools
+          pip install --upgrade pip setuptools wheel
+          
           # Install dependencies with platform-specific builds for Lambda
-          pip install -r backend/requirements.txt -t $BUILD_DIR --platform manylinux2014_x86_64 --only-binary=:all: --upgrade
+          # Use --no-deps to avoid metadata issues, then install dependencies manually
+          pip install -r backend/requirements.txt -t $BUILD_DIR \
+            --platform manylinux2014_x86_64 \
+            --only-binary=:all: \
+            --upgrade \
+            --force-reinstall
+          
+          # Fix email-validator metadata issue specifically
+          pip install email-validator -t $BUILD_DIR \
+            --platform manylinux2014_x86_64 \
+            --only-binary=:all: \
+            --upgrade \
+            --force-reinstall \
+            --no-cache-dir
           
           # Copy application code
           cp -r backend/. $BUILD_DIR/
           
-          # Remove unnecessary files to reduce package size
+          # Create a simple __init__.py in the root if it doesn't exist
+          touch $BUILD_DIR/__init__.py
+          
+          # Remove unnecessary files to reduce package size but keep metadata
           find $BUILD_DIR -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
           find $BUILD_DIR -type f -name "*.pyc" -delete 2>/dev/null || true
-          find $BUILD_DIR -type d -name "*.dist-info" -exec rm -rf {} + 2>/dev/null || true
           find $BUILD_DIR -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true
+          # Keep .dist-info directories for metadata
           
           deactivate
 
@@ -74,6 +93,18 @@ jobs:
             echo "Available functions:"
             grep "^def " "$BUILD_DIR/app.py" || echo "No functions found"
           fi
+          
+          # Check for email-validator specifically
+          echo "Checking for email-validator installation..."
+          if [ -d "$BUILD_DIR/email_validator" ] || find $BUILD_DIR -name "*email*validator*" -type d | head -1; then
+            echo "✅ email-validator found"
+          else
+            echo "❌ email-validator not found - this may cause import errors"
+          fi
+          
+          # List all installed packages for debugging
+          echo "Installed packages:"
+          find $BUILD_DIR -maxdepth 1 -type d -name "*" | grep -E "\.(dist-info|egg-info)$" | head -10
 
       - name: Zip Lambda package
         run: |
@@ -132,7 +163,7 @@ jobs:
               --zip-file fileb://lambda-deploy.zip \
               --timeout 30 \
               --memory-size 128 \
-              --environment Variables='{PYTHONPATH="/var/task"}' \
+              --environment Variables='{PYTHONPATH="/var/task:/var/runtime"}' \
               --description "Deployed via GitHub Actions"
           else
             echo "Updating existing Lambda function..."
@@ -150,11 +181,12 @@ jobs:
             aws lambda wait function-updated --function-name $FUNCTION_NAME
             
             # Update function configuration while preserving existing env vars
+            UPDATED_ENV=$(echo "$EXISTING_ENV" | jq '. + {"PYTHONPATH": "/var/task:/var/runtime"}')
             aws lambda update-function-configuration \
               --function-name $FUNCTION_NAME \
               --timeout 30 \
               --memory-size 128 \
-              --environment Variables="$EXISTING_ENV"
+              --environment Variables="$UPDATED_ENV"
           fi
           
           # Wait for the function to be active
