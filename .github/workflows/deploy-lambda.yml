@@ -85,22 +85,6 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      - name: Move backend files to build root if needed
-        run: |
-          if [ -f "$BUILD_DIR/backend/app.py" ]; then
-            echo "Moving backend/* to build root..."
-            mv $BUILD_DIR/backend/* $BUILD_DIR/
-            rmdir $BUILD_DIR/backend
-          fi
-      - name: Check if app.py is at the root of build directory
-        run: |
-          if [ ! -f "$BUILD_DIR/app.py" ]; then
-            echo "❌ ERROR: app.py is not at the root of the build directory!"
-            ls -l $BUILD_DIR
-            exit 1
-          else
-            echo "✅ app.py is at the root of the build directory."
-          fi
       - name: List workspace contents
         run: ls -l
       - name: List backend directory contents
