@@ -71,14 +71,16 @@ jobs:
           if [ -n "$LAMBDA_ENV_VARS" ] && [ "$LAMBDA_ENV_VARS" != "{}" ]; then
             # If LAMBDA_ENV_VARS is provided, wrap it in Variables object
             echo "{\"Variables\": $LAMBDA_ENV_VARS}" > env.json
+            echo "Environment variables configured (count: $(echo "$LAMBDA_ENV_VARS" | jq -r 'keys | length'))"
           else
             # Create empty environment variables
             echo '{"Variables": {}}' > env.json
+            echo "No environment variables configured"
           fi
           
-          # Debug: show what we're creating
-          echo "Environment configuration:"
-          cat env.json
+          # Debug: show what we're creating (without revealing values)
+          echo "Environment configuration structure:"
+          cat env.json | jq -r 'keys' || echo "Environment file created successfully"
           
           if aws lambda get-function --function-name $FUNCTION_NAME &>/dev/null; then
             echo "Updating existing function..."
@@ -90,7 +92,7 @@ jobs:
             # Update function code first
             aws lambda update-function-code \
               --function-name $FUNCTION_NAME \
-              --zip-file file://$ZIP_FILE
+              --zip-file fileb://$ZIP_FILE
             
             # Wait for code update to complete
             aws lambda wait function-updated --function-name $FUNCTION_NAME
@@ -112,7 +114,7 @@ jobs:
               --role $ROLE_ARN \
               --handler $HANDLER \
               --architectures $ARCHITECTURE \
-              --zip-file file://$ZIP_FILE \
+              --zip-file fileb://$ZIP_FILE \
               --environment file://env.json \
               --timeout 30 \
               --memory-size 256
