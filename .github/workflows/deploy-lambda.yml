@@ -107,7 +107,10 @@ jobs:
             --upgrade \
             --python-version 3.13
 
-          cp app.py game_logic.py supabase_client.py elevenlabs_utils.py __init__.py $BUILD_DIR/
+          echo "Copying: app.py auth_routes.py game_logic.py game_routes.py models.py to $BUILD_DIR/"
+          cp app.py auth_routes.py game_logic.py game_routes.py models.py $BUILD_DIR/
+          echo "Copying: security.py voice_routes.py supabase_client.py elevenlabs_utils.py __init__.py to $BUILD_DIR/"
+          cp security.py voice_routes.py supabase_client.py elevenlabs_utils.py __init__.py $BUILD_DIR/
           find $BUILD_DIR \( -name '__pycache__' -o -name '*.pyc' \) -exec rm -rf {} +
 
       - name: Package deployment

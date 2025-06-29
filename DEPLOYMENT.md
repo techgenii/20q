@@ -22,15 +22,22 @@ Set these environment variables for your deployment:
 ```
 20q/
 ├── backend/
-│   ├── requirements.txt          # Production dependencies
-│   ├── dev-requirements.txt      # Development dependencies
+│   ├── app.py                   # FastAPI application entrypoint
+│   ├── auth_routes.py           # Authentication and profile routes
+│   ├── game_routes.py           # Game logic routes
+│   ├── voice_routes.py          # Voice/AI routes
+│   ├── models.py                # Pydantic models
+│   ├── security.py              # Auth dependencies
+│   ├── requirements.txt         # Production dependencies
+│   ├── dev-requirements.txt     # Development dependencies
 │   ├── pytest.ini               # Test configuration
-│   ├── app.py                   # FastAPI application
 │   └── tests/                   # Test files
-├── frontend/                    # React frontend
+├── frontend/                    # React frontend (Using Bolt.new)
 └── .github/workflows/
     └── deploy-lambda.yml        # CI/CD workflow
 ```
+
+> **Note:** All backend modules now use relative imports (e.g., `from .models import ...`) for compatibility with testing and deployment. The backend is split into modular routers for maintainability.
 
 ## Local Development
 
@@ -54,6 +61,7 @@ Set these environment variables for your deployment:
    cd backend
    uvicorn app:app --reload --host 0.0.0.0 --port 8000
    ```
+   > Note: This matches the Lambda handler (`app.handler`) and the use of absolute imports in the backend code. If you use a package structure, see the alternative command above.
 
 ## Automated Deployment (GitHub Actions)
 
@@ -156,13 +164,24 @@ https://[api-id].execute-api.[region].amazonaws.com/docs
 ### Available Endpoints
 - `POST /auth/signup` - User registration
 - `POST /auth/login` - User login
+- `POST /auth/logout` - User logout
+- `GET /auth/me` - Get current user info
+- `POST /auth/refresh` - Refresh access token
+- `POST /auth/reset-password` - Send password reset email
+- `PUT /profile` - Update user profile
 - `POST /start_game` - Start a new game
 - `POST /join_game` - Join an existing game
 - `POST /ask_question` - Ask a question
 - `POST /make_guess` - Make a guess
 - `GET /game/{game_id}` - Get game information
+- `POST /ask_question_voice` - Ask a question and get audio response
 - `POST /voice/text-to-speech` - Text-to-speech conversion
 - `GET /voice/voices` - Get available voices
+- `POST /voice/speech-to-text` - Speech-to-text conversion
+- `POST /game/{game_id}/voice-settings` - Update voice settings for a game
+
+> **Testing Note:**
+> Tests are now fully isolated, mock all external dependencies, and should be run from the project root or backend directory.
 
 ## Monitoring and Logs
 
@@ -216,8 +235,30 @@ aws logs get-log-events --log-group-name /aws/lambda/YourFunctionName --log-stre
    - Review recent log entries
 
 3. **Test Locally**
-   - Run `uvicorn app:app --reload` for local development
-   - Run tests with `cd backend && pytest tests/`
+   - If using **absolute imports** (flattened backend for Lambda):
+     ```bash
+     cd backend
+     uvicorn app:app --reload
+     ```
+   - If using **relative imports** (backend as a package):
+     ```bash
+     uvicorn backend.app:app --reload
+     ```
+   - For tests with absolute imports:
+     ```bash
+     PYTHONPATH=backend pytest
+     ```
+
+4. **Import Errors (Relative vs Absolute)**
+   - If you see `ImportError: attempted relative import with no known parent package`, you are running the app as a script instead of as a module. Use the correct uvicorn command as above.
+   - If you see `ModuleNotFoundError` for your own modules, check that your imports match your deployment structure (absolute for flattened, relative for package).
+
+5. **Lambda Handler Issues**
+   - If Lambda fails to start, check that your handler matches your file structure (e.g., `app.handler` for flattened, `backend/app.handler` for package).
+   - Ensure all dependencies are included in your deployment package.
+
+6. **Check for Missing Dependencies**
+   - If you see `ModuleNotFoundError` for third-party packages, ensure they are in `requirements.txt` and installed in your deployment package.
 
 ## Security Considerations
 
