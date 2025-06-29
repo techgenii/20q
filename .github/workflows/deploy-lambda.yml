@@ -1,10 +1,10 @@
-name: Step 2 - Deploy to Lambda
+
+name: Deploy to Lambda
 
 on:
-  workflow_run:
-    workflows: ["Step 1 - Test Backend"]
-    types:
-      - completed
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -18,7 +18,7 @@ jobs:
       HANDLER: app.handler
       RUNTIME: python3.13
       STAGE_NAME: '$default'
-      FUNCTION_NAME: ${{ secrets.FUNCTION_NAME }}
+      FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
       ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
       REGION: ${{ secrets.AWS_REGION }}
       API_GATEWAY_NAME: ${{ secrets.API_GATEWAY_NAME || 'MyAPI' }}
@@ -119,15 +119,31 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-    - name: Deploy Lambda Function
+      - name: Deploy Lambda Function
         run: |
           echo "Deploying Lambda function: $FUNCTION_NAME"
+          
+          # Parse environment variables from JSON format
+          if [ -n "${{ secrets.LAMBDA_ENV_VARS }}" ]; then
+            echo "Setting up environment variables..."
+            ENV_VARS='${{ secrets.LAMBDA_ENV_VARS }}'
+            echo "Environment variables configured: $(echo "$ENV_VARS" | jq -r 'keys | join(", ")')"
+          else
+            ENV_VARS='{}'
+            echo "No environment variables configured"
+          fi
           
           if aws lambda get-function --function-name $FUNCTION_NAME &>/dev/null; then
             echo "Updating existing function..."
             aws lambda update-function-code --function-name $FUNCTION_NAME --zip-file fileb://lambda-deploy.zip
             aws lambda wait function-updated --function-name $FUNCTION_NAME
-            aws lambda update-function-configuration --function-name $FUNCTION_NAME --timeout 30 --memory-size 128
+            
+            # Update function configuration with environment variables
+            aws lambda update-function-configuration \
+              --function-name $FUNCTION_NAME \
+              --timeout 30 \
+              --memory-size 128 \
+              --environment "Variables=$ENV_VARS"
           else
             echo "Creating new function..."
             aws lambda create-function \
@@ -137,7 +153,8 @@ jobs:
               --handler $HANDLER \
               --zip-file fileb://lambda-deploy.zip \
               --timeout 30 \
-              --memory-size 128
+              --memory-size 128 \
+              --environment "Variables=$ENV_VARS"
           fi
 
           aws lambda wait function-active --function-name $FUNCTION_NAME
