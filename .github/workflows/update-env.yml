@@ -2,7 +2,7 @@ name: Step 3 - Update Lambda Env Vars
 
 on:
   workflow_run:
-    workflows: ["Deploy to Lambda"]
+    workflows: ["Step 2 - Deploy to Lambda"]
     types:
       - completed
   workflow_dispatch:

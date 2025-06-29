@@ -2,7 +2,7 @@ name: Step 2 - Deploy to Lambda
 
 on:
   workflow_run:
-    workflows: ["Test Backend"]
+    workflows: ["Step 1 - Test Backend"]
     types:
       - completed
   workflow_dispatch:
@@ -56,6 +56,13 @@ jobs:
           cd $BUILD_DIR
           zip -r ../lambda-deploy.zip .
           cd ..
+
+      - name: Verify Lambda package exists
+        run: |
+          if [ ! -f lambda-deploy.zip ]; then
+            echo "❌ ERROR: Lambda deployment package not found."
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
