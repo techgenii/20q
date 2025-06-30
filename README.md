@@ -167,7 +167,7 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 
 ## 🔗 Links
 
-- [Live Demo](https://startling-beijinho-0245f3.netlify.app) *(if available)*
+- [Live Demo](https://whisperchase.xyz) *(if available)*
 - [Documentation](https://github.com/techgenii/20q/wiki)
 - [Report Issues](https://github.com/techgenii/20q/issues)
 - [Discussions](https://github.com/techgenii/20q/discussions)

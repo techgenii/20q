@@ -218,19 +218,15 @@ def join_game(game_id, player_id):
 def ask_openai_question(secret_word, question, enable_tts=False, voice_id=None):
     """Send player question + secret word to OpenAI, get Yes/No/Maybe answer with optional TTS."""
     try:
-        instruction_prompt = (
-            f"""You are playing 20 Questions. The secret word is "{secret_word}"""
-        )
+        instruction_prompt = f"""You are playing 20 Questions. The secret word is "{secret_word}"""
         prompt = f"""The player asked: "{question}" Answer with only one word: Yes, No, or Maybe."""
-        response = openai.ChatCompletion.create(
+        response = openai.responses.create(
             model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": instruction_prompt},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0,
+            instructions=instruction_prompt,
+            input=prompt,
+            temperature=0
         )
-        answer = response.choices[0].message.content.strip().rstrip(".")
+        answer = response.output_text.strip().rstrip('.')
         result = {"answer": answer}
 
         # Generate TTS if enabled
@@ -428,8 +424,6 @@ def update_game_tts_settings(game_id, enable_tts=None, voice_id=None):
 
 
 """Check guess correctness with OpenAI, update game if correct, with optional TTS."""
-
-
 def make_guess(game_id, player_id, guess, enable_tts=False, voice_id=None):
     """
     Check if the guess is correct. If so, update the game winner.
@@ -439,21 +433,19 @@ def make_guess(game_id, player_id, guess, enable_tts=False, voice_id=None):
         game = get_game(game_id)
         secret_word = game["secret_word"]
 
-        instruction_prompt = (
-            f"""You are playing 20 Questions. The secret word is "{secret_word}"."""
-        )
+        game = get_game(game_id)
+        secret_word = game["secret_word"]
+
+        instruction_prompt = f"""You are playing 20 Questions. The secret word is "{secret_word}"."""
         prompt = f"""The player guessed: "{guess}"\nReply with exactly one word: Correct or Incorrect."""
-
-        response = openai.ChatCompletion.create(
+        
+        response = openai.responses.create(
             model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": instruction_prompt},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0,
+            instructions=instruction_prompt,
+            input=prompt,
+            temperature=0
         )
-        result_text = response.choices[0].message.content.strip().rstrip(".").lower()
-
+        result_text = response.output_text.strip().rstrip('.').lower()
         result = {"correct": result_text == "correct", "message": result_text}
 
         if result_text == "correct":

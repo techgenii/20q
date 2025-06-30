@@ -1,31 +1,33 @@
 {
-    "configurations": [
-        
+  "configurations": [
+    {
+      "name": "Python Debugger: FastAPI",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "backend.app:app",
+        "--reload"
+      ],
+      "jinja": true,
+      "env": {
+        "PYTHONPATH": "backend"
+      }
+    },
+    {
+      "name": "Attach to FastAPI",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5678
+      },
+      "pathMappings": [
         {
-            "name": "Python Debugger: FastAPI",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "uvicorn",
-            "args": [
-                "backend.app:app",
-                "--reload"
-            ],
-            "jinja": true
-        },
-        {
-            "name": "Attach to FastAPI",
-            "type": "debugpy",
-            "request": "attach",
-            "connect": {
-              "host": "localhost",
-              "port": 5678
-            },
-            "pathMappings": [
-              {
-                "localRoot": "${workspaceFolder}",
-                "remoteRoot": "."
-              }
-            ]
-          }
-    ]
+          "localRoot": "${workspaceFolder}",
+          "remoteRoot": "."
+        }
+      ]
+    }
+  ]
 }
