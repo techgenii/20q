@@ -40,6 +40,43 @@ export interface LoginResponse {
   user: ApiUser;
 }
 
+export interface StartGameRequest {
+  difficulty: number; // 1-5
+  game_type: 'solo' | 'multi-player';
+  max_players: number; // max 4
+  guessed_word: string;
+}
+
+export interface StartGameResponse {
+  game_id: string;
+  secret_word: string; // "hidden_for_players"
+  host_player_id: string;
+  game_type: 'solo' | 'multi-player';
+  max_players: number;
+  guessed_word: string;
+  difficulty: number;
+}
+
+export interface AskQuestionRequest {
+  game_id: string;
+  question: string;
+}
+
+export interface AskQuestionResponse {
+  answer: string;
+  question_number: number;
+}
+
+export interface MakeGuessRequest {
+  game_id: string;
+  guess: string;
+}
+
+export interface MakeGuessResponse {
+  correct: 'Correct' | 'Incorrect';
+  player_id: string;
+}
+
 export interface GameMessage {
   id: number;
   user: string;
@@ -86,6 +123,7 @@ export interface VoiceState {
 }
 
 export interface GameScreenProps {
+  gameData: StartGameResponse | null;
   onBackToLobby: () => void;
   voiceState: VoiceState;
   startRecording: () => void;

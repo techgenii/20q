@@ -1,5 +1,5 @@
 import React, { useState, Suspense, useEffect } from 'react';
-import { User, Screen, LeaderboardEntry, LoginResponse } from '@/types';
+import { User, Screen, LeaderboardEntry, LoginResponse, StartGameResponse } from '@/types';
 import { mockLeaderboard, mockHistory, mockGames } from '@/data/mockData';
 import { useVoice } from '@/hooks/useVoice';
 import { apiClient } from '@/lib/apiClient';
@@ -31,6 +31,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [viewedProfileUser, setViewedProfileUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [currentGame, setCurrentGame] = useState<StartGameResponse | null>(null);
   const { voiceState, audioRef, startRecording, stopRecording, playAudio, pauseAudio, toggleVoiceEnabled, clearTranscription } = useVoice();
 
   // Initialize API client callbacks
@@ -81,6 +82,7 @@ const App: React.FC = () => {
       setUser(null);
       setViewedProfileUser(null);
       setAccessToken(null);
+      setCurrentGame(null);
       setCurrentScreen('login');
     }
   };
@@ -90,11 +92,46 @@ const App: React.FC = () => {
     if (screen !== 'profile') {
       setViewedProfileUser(null);
     }
+    // Clear game data when navigating away from game screen
+    if (screen !== 'game') {
+      setCurrentGame(null);
+    }
     setCurrentScreen(screen);
   };
 
-  const handleStartGame = () => {
-    setCurrentScreen('game');
+  const handleStartGame = async (gameData: { difficulty: number; gameType: 'solo' | 'multi-player'; maxPlayers: number; guessedWord: string }) => {
+    try {
+      console.log('Starting game with:', gameData);
+      
+      const startGameRequest = {
+        difficulty: gameData.difficulty,
+        game_type: gameData.gameType,
+        max_players: gameData.maxPlayers,
+        guessed_word: gameData.guessedWord
+      };
+
+      console.log('Sending start game request:', startGameRequest);
+      const response = await apiClient.startGame(startGameRequest);
+      
+      if (response.error) {
+        console.error('Failed to start game:', response.error);
+        // Show user-friendly error message
+        alert(`Failed to start game: ${response.error}`);
+        return;
+      }
+
+      if (response.data) {
+        console.log('Game started successfully:', response.data);
+        setCurrentGame(response.data);
+        setCurrentScreen('game');
+      } else {
+        console.error('No game data received from API');
+        alert('Failed to start game: No response data received');
+      }
+    } catch (error) {
+      console.error('Error starting game:', error);
+      alert('An unexpected error occurred while starting the game. Please try again.');
+    }
   };
 
   const handleJoinGame = (gameId: number) => {
@@ -102,6 +139,7 @@ const App: React.FC = () => {
   };
 
   const handleBackToLobby = () => {
+    setCurrentGame(null);
     setCurrentScreen('lobby');
   };
 
@@ -191,6 +229,7 @@ const App: React.FC = () => {
           
           {currentScreen === 'game' && (
             <GameScreen 
+              gameData={currentGame}
               onBackToLobby={handleBackToLobby}
               voiceState={voiceState}
               startRecording={startRecording}
