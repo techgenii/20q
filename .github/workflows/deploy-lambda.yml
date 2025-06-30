@@ -38,6 +38,10 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Force reinstall openai
+        run: |
+          pip install --force-reinstall openai
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -105,6 +109,8 @@ jobs:
             --no-cache-dir \
             --upgrade \
             --python-version 3.13
+          
+          pip install --force-reinstall --no-deps openai -t $BUILD_DIR
 
           echo "Copying: app.py auth_routes.py game_logic.py game_routes.py models.py to $BUILD_DIR/"
           cp app.py auth_routes.py game_logic.py game_routes.py models.py $BUILD_DIR/
