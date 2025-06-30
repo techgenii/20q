@@ -16,14 +16,18 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import auth_routes as auth_routes
+import game_routes as game_routes
+import voice_routes as voice_routes
+import supabase as supabase
+
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
-from app import app
+from whisper import whisper
 from security import security
 import pytest
 
 # Create TestClient with base_url to handle root_path
-client = TestClient(app, base_url="http://testserver")
+client = TestClient(whisper, base_url="http://testserver")
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -35,7 +39,7 @@ def override_auth_dependencies():
     fake_user.user_metadata = {"full_name": "Test User"}
     fake_user.created_at.isoformat.return_value = "2025-01-01T00:00:00"
 
-    app.dependency_overrides.clear()
+    whisper.dependency_overrides.clear()
 
     mock_credentials = MagicMock()
     mock_credentials.credentials = "testtoken"
@@ -52,14 +56,14 @@ def override_auth_dependencies():
         print("🔧 Mock get_current_user_optional called")
         return fake_user
 
-    app.dependency_overrides[security] = mock_security
-    app.dependency_overrides[auth_routes.get_current_user] = mock_get_current_user
-    app.dependency_overrides[auth_routes.get_current_user_optional] = mock_get_current_user_optional
+    whisper.dependency_overrides[security] = mock_security
+    whisper.dependency_overrides[auth_routes.get_current_user] = mock_get_current_user
+    whisper.dependency_overrides[auth_routes.get_current_user_optional] = mock_get_current_user_optional
 
-    print(f"🔧 Dependency overrides set: {list(app.dependency_overrides.keys())}")
+    print(f"🔧 Dependency overrides set: {list(whisper.dependency_overrides.keys())}")
 
     # Patch Supabase client to always return a player with the test UUID
-    with patch("backend.supabase_client.get_supabase_client") as mock_supabase:
+    with patch("supabase_client.get_supabase_client") as mock_supabase:
         mock_supabase.return_value.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value.data = {
             "id": "123e4567-e89b-12d3-a456-426614174000",
             "email": "test@example.com",
@@ -70,16 +74,16 @@ def override_auth_dependencies():
             "favorite_category": None,
             "achievements": [],
         }
-        client = TestClient(app)
+        client = TestClient(whisper)
         yield client
     print("🔧 Cleaning up auth dependency overrides...")
-    app.dependency_overrides.clear()
+    whisper.dependency_overrides.clear()
 
 
 def test_start_game_success():
-    with patch("backend.supabase_client.get_supabase_client") as mock_supabase, \
+    with patch("supabase_client.get_supabase_client") as mock_supabase, \
          patch("supabase_client.get_supabase_client") as mock_supabase_rel, \
-         patch("backend.game_routes.start_game") as mock_start_game:
+         patch("game_routes.start_game") as mock_start_game:
         # Patch select and insert for player lookup and creation
         for mock in (mock_supabase, mock_supabase_rel):
             # Patch select to return the test player
@@ -114,15 +118,17 @@ def test_start_game_success():
 
 
 def test_start_game_failure():
-    with patch("backend.game_routes.start_game", side_effect=Exception("fail")):
-        resp = client.post("/start_game", json={"difficulty": 1}, headers={"Authorization": "Bearer testtoken"})
+    with patch("game_routes.start_game", side_effect=Exception("fail")):
+        resp = client.post("/start_game", 
+                    json={"difficulty": 1,"max_players": 1, "game_type": "solo", "guessed_word": None}, 
+                    headers={"Authorization": "Bearer testtoken"})
         assert resp.status_code == 500
         assert "fail" in resp.json().get("detail", "")
 
 
 def test_join_game_success():
-    with patch("backend.game_routes.join_game") as mock_join_game, patch(
-        "backend.game_routes.get_remaining_slots"
+    with patch("game_routes.join_game") as mock_join_game, patch(
+        "game_routes.get_remaining_slots"
     ) as mock_get_remaining_slots:
         mock_join_game.return_value = {
             "game_id": "game-uuid",
@@ -139,8 +145,8 @@ def test_join_game_success():
 
 
 def test_join_game_no_max_players():
-    with patch("backend.game_routes.join_game") as mock_join_game, patch(
-        "backend.game_routes.get_remaining_slots"
+    with patch("game_routes.join_game") as mock_join_game, patch(
+        "game_routes.get_remaining_slots"
     ) as mock_get_remaining_slots:
         mock_join_game.return_value = {
             "game_id": "game-uuid",
@@ -156,7 +162,7 @@ def test_join_game_no_max_players():
 
 
 def test_join_game_failure():
-    with patch("backend.game_routes.join_game", side_effect=Exception("fail")):
+    with patch("game_routes.join_game", side_effect=Exception("fail")):
         resp = client.post(
             "/join_game", json={"game_id": "game-uuid"}, headers={"Authorization": "Bearer testtoken"}
         )
@@ -165,10 +171,10 @@ def test_join_game_failure():
 
 
 def test_ask_question_active():
-    with patch("backend.game_routes.get_game") as mock_get_game, patch(
-        "backend.game_routes.ask_openai_question"
-    ) as mock_ask, patch("backend.game_routes.increment_questions_asked") as mock_inc, patch(
-        "backend.game_routes.record_question"
+    with patch("game_routes.get_game") as mock_get_game, patch(
+        "game_routes.ask_openai_question"
+    ) as mock_ask, patch("game_routes.increment_questions_asked") as mock_inc, patch(
+        "game_routes.record_question"
     ) as mock_record:
         mock_get_game.return_value = {"status": "playing", "secret_word": "test"}
         mock_ask.return_value = "Yes"
@@ -186,7 +192,7 @@ def test_ask_question_active():
 
 
 def test_ask_question_inactive():
-    with patch("backend.game_routes.get_game") as mock_get_game:
+    with patch("game_routes.get_game") as mock_get_game:
         mock_get_game.return_value = {"status": "finished"}
         resp = client.post(
             "/ask_question",
@@ -201,7 +207,7 @@ def test_ask_question_inactive():
 
 
 def test_ask_question_failure():
-    with patch("backend.game_routes.get_game", side_effect=Exception("fail")):
+    with patch("game_routes.get_game", side_effect=Exception("fail")):
         resp = client.post(
             "/ask_question",
             json={
@@ -215,8 +221,8 @@ def test_ask_question_failure():
 
 
 def test_make_guess_active():
-    with patch("backend.game_routes.get_game") as mock_get_game, patch(
-        "backend.game_routes.make_guess"
+    with patch("game_routes.get_game") as mock_get_game, patch(
+        "game_routes.make_guess"
     ) as mock_make_guess:
         mock_get_game.return_value = {"status": "playing"}
         mock_make_guess.return_value = True
@@ -233,7 +239,7 @@ def test_make_guess_active():
 
 
 def test_make_guess_inactive():
-    with patch("backend.game_routes.get_game") as mock_get_game:
+    with patch("game_routes.get_game") as mock_get_game:
         mock_get_game.return_value = {"status": "finished"}
         resp = client.post(
             "/make_guess",
@@ -248,7 +254,7 @@ def test_make_guess_inactive():
 
 
 def test_make_guess_failure():
-    with patch("backend.game_routes.get_game", side_effect=Exception("fail")):
+    with patch("game_routes.get_game", side_effect=Exception("fail")):
         resp = client.post(
             "/make_guess",
             json={
@@ -263,8 +269,8 @@ def test_make_guess_failure():
 
 # Authentication Tests
 def test_auth_signup_success():
-    with patch("backend.auth_routes.get_supabase_auth_client") as mock_auth, \
-         patch("backend.auth_routes.get_supabase_client") as mock_table:
+    with patch("auth_routes.get_supabase_auth_client") as mock_auth, \
+         patch("auth_routes.get_supabase_client") as mock_table:
         mock_user = MagicMock()
         mock_user.id = "test-user-id"
         mock_user.email = "test@example.com"
@@ -304,7 +310,7 @@ def test_auth_signup_success():
 
 
 def test_auth_signup_failure():
-    with patch("backend.auth_routes.get_supabase_auth_client") as mock_auth:
+    with patch("auth_routes.get_supabase_auth_client") as mock_auth:
         mock_response = MagicMock()
         mock_response.user = None
         mock_auth.return_value.auth.sign_up.return_value = mock_response
@@ -318,8 +324,8 @@ def test_auth_signup_failure():
 
 
 def test_auth_login_success():
-    with patch("backend.auth_routes.get_supabase_auth_client") as mock_auth, \
-         patch("backend.auth_routes.get_supabase_client") as mock_table:
+    with patch("auth_routes.get_supabase_auth_client") as mock_auth, \
+         patch("auth_routes.get_supabase_client") as mock_table:
         mock_user = MagicMock()
         mock_user.id = "test-user-id"
         mock_user.email = "test@example.com"
@@ -355,7 +361,7 @@ def test_auth_login_success():
 
 
 def test_auth_login_failure():
-    with patch("backend.auth_routes.get_supabase_auth_client") as mock_auth:
+    with patch("auth_routes.get_supabase_auth_client") as mock_auth:
         mock_response = MagicMock()
         mock_response.user = None
         mock_auth.return_value.auth.sign_in_with_password.return_value = mock_response
@@ -369,14 +375,14 @@ def test_auth_login_failure():
 
 
 def test_auth_logout_success():
-    with patch("backend.auth_routes.get_supabase_auth_client") as mock_auth:
+    with patch("auth_routes.get_supabase_auth_client") as mock_auth:
         resp = client.post("/auth/logout", headers={"Authorization": "Bearer testtoken"})
         assert resp.status_code == 200
         assert resp.json()["message"] == "Successfully logged out"
 
 
 def test_auth_me_success():
-    with patch("backend.auth_routes.get_supabase_client") as mock_table:
+    with patch("auth_routes.get_supabase_client") as mock_table:
         mock_table.return_value.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value.data = {
             "avatar_url": None,
             "last_login_at": None,
@@ -387,11 +393,11 @@ def test_auth_me_success():
         resp = client.get("/auth/me", headers={"Authorization": "Bearer testtoken"})
         assert resp.status_code == 200
         data = resp.json()
-        assert data["id"] == "test-user-id"
+        assert data["id"] == "123e4567-e89b-12d3-a456-426614174000"
 
 
 def test_auth_reset_password_success():
-    with patch("backend.auth_routes.get_supabase_auth_client") as mock_auth:
+    with patch("auth_routes.get_supabase_auth_client") as mock_auth:
         resp = client.post("/auth/reset-password", params={"email": "test@example.com"}, headers={"Authorization": "Bearer testtoken"})
         assert resp.status_code == 200
         assert resp.json()["message"] == "Password reset email sent"
@@ -405,7 +411,7 @@ def test_voice_text_to_speech_success():
         mock_response.status_code = 200
         mock_response.content = b"audio-data"
         mock_post.return_value = mock_response
-        with patch("backend.voice_routes.get_current_user", return_value=MagicMock()):
+        with patch("voice_routes.get_current_user", return_value=MagicMock()):
             resp = client.post(
                 "/voice/text-to-speech",
                 json={
@@ -426,7 +432,7 @@ def test_voice_text_to_speech_success():
 def test_voice_text_to_speech_no_api_key():
     with patch("os.getenv") as mock_getenv:
         mock_getenv.return_value = None
-        with patch("backend.voice_routes.get_current_user", return_value=MagicMock()):
+        with patch("voice_routes.get_current_user", return_value=MagicMock()):
             resp = client.post("/voice/text-to-speech", json={"text": "Hello world"}, headers={"Authorization": "Bearer testtoken"})
             assert resp.status_code == 500
             assert "ElevenLabs API key not configured" in resp.json()["detail"]
@@ -448,7 +454,7 @@ def test_voice_get_voices_success():
             ]
         }
         mock_get.return_value = mock_response
-        with patch("backend.voice_routes.get_current_user", return_value=MagicMock()):
+        with patch("voice_routes.get_current_user", return_value=MagicMock()):
             resp = client.get("/voice/voices", headers={"Authorization": "Bearer testtoken"})
             assert resp.status_code == 200
             data = resp.json()
@@ -465,7 +471,7 @@ def test_voice_speech_to_text_success():
         mock_post.return_value = mock_response
         from io import BytesIO
         audio_file = BytesIO(b"fake-audio-data")
-        with patch("backend.voice_routes.get_current_user", return_value=MagicMock()):
+        with patch("voice_routes.get_current_user", return_value=MagicMock()):
             resp = client.post(
                 "/voice/speech-to-text",
                 files={"audio_file": ("test.mp3", audio_file, "audio/mpeg")},
@@ -477,13 +483,13 @@ def test_voice_speech_to_text_success():
 
 # Enhanced Game Endpoints Tests
 def test_ask_question_voice_success():
-    with patch("backend.voice_routes.get_game") as mock_get_game, \
-         patch("backend.voice_routes.ask_openai_question") as mock_ask, \
-         patch("backend.voice_routes.increment_questions_asked") as mock_inc, \
-         patch("backend.voice_routes.record_question") as mock_record, \
+    with patch("voice_routes.get_game") as mock_get_game, \
+         patch("voice_routes.ask_openai_question") as mock_ask, \
+         patch("voice_routes.increment_questions_asked") as mock_inc, \
+         patch("voice_routes.record_question") as mock_record, \
          patch("os.getenv") as mock_getenv, \
          patch("requests.post") as mock_post, \
-         patch("backend.voice_routes.get_current_user", return_value=MagicMock()):
+         patch("voice_routes.get_current_user", return_value=MagicMock()):
         mock_get_game.return_value = {"status": "playing", "secret_word": "test"}
         mock_ask.return_value = "Yes"
         mock_inc.return_value = 1
@@ -506,12 +512,12 @@ def test_ask_question_voice_success():
 
 
 def test_ask_question_voice_no_audio():
-    with patch("backend.voice_routes.get_game") as mock_get_game, \
-         patch("backend.voice_routes.ask_openai_question") as mock_ask, \
-         patch("backend.voice_routes.increment_questions_asked") as mock_inc, \
-         patch("backend.voice_routes.record_question") as mock_record, \
+    with patch("voice_routes.get_game") as mock_get_game, \
+         patch("voice_routes.ask_openai_question") as mock_ask, \
+         patch("voice_routes.increment_questions_asked") as mock_inc, \
+         patch("voice_routes.record_question") as mock_record, \
          patch("os.getenv") as mock_getenv, \
-         patch("backend.voice_routes.get_current_user", return_value=MagicMock()):
+         patch("voice_routes.get_current_user", return_value=MagicMock()):
         mock_get_game.return_value = {"status": "playing", "secret_word": "test"}
         mock_ask.return_value = "Yes"
         mock_inc.return_value = 1
@@ -530,8 +536,8 @@ def test_ask_question_voice_no_audio():
 
 
 def test_ask_question_voice_game_not_active():
-    with patch("backend.voice_routes.get_game") as mock_get_game, \
-         patch("backend.voice_routes.get_current_user", return_value=MagicMock()):
+    with patch("voice_routes.get_game") as mock_get_game, \
+         patch("voice_routes.get_current_user", return_value=MagicMock()):
         mock_get_game.return_value = {"status": "finished"}
         resp = client.post(
             "/ask_question_voice",
@@ -564,7 +570,7 @@ def test_update_game_voice_settings():
 
 # Game Endpoint with Optional Auth Tests
 def test_get_game_with_auth():
-    with patch("backend.game_routes.get_game") as mock_get_game:
+    with patch("game_routes.get_game") as mock_get_game:
         mock_get_game.return_value = {
             "id": "game-uuid",
             "status": "playing",
@@ -580,10 +586,10 @@ def test_get_game_with_auth():
 
 def test_get_game_without_auth():
     # Temporarily override the optional auth dependency to return None
-    original_override = app.dependency_overrides.get(auth_routes.get_current_user_optional)
-    app.dependency_overrides[auth_routes.get_current_user_optional] = lambda: None
+    original_override = whisper.dependency_overrides.get(auth_routes.get_current_user_optional)
+    whisper.dependency_overrides[auth_routes.get_current_user_optional] = lambda: None
     try:
-        with patch("backend.game_routes.get_game") as mock_get_game:
+        with patch("game_routes.get_game") as mock_get_game:
             mock_get_game.return_value = {
                 "id": "game-uuid",
                 "status": "playing",
@@ -597,9 +603,9 @@ def test_get_game_without_auth():
             assert "secret_word" not in data
     finally:
         if original_override:
-            app.dependency_overrides[auth_routes.get_current_user_optional] = original_override
+            whisper.dependency_overrides[auth_routes.get_current_user_optional] = original_override
         else:
-            app.dependency_overrides.pop(auth_routes.get_current_user_optional, None)
+            whisper.dependency_overrides.pop(auth_routes.get_current_user_optional, None)
 
 
 # Health Check Test
@@ -658,7 +664,7 @@ def test_speech_to_text_no_api_key():
 
 # Edge Cases
 def test_auth_signup_exception():
-    with patch("backend.supabase_client.get_supabase_auth_client") as mock_auth:
+    with patch("supabase_client.get_supabase_auth_client") as mock_auth:
         mock_auth.side_effect = Exception("Database error")
 
         resp = client.post(
@@ -672,7 +678,7 @@ def test_auth_signup_exception():
 
 
 def test_auth_logout_exception():
-    with patch("backend.auth_routes.get_supabase_auth_client") as mock_auth:
+    with patch("auth_routes.get_supabase_auth_client") as mock_auth:
         mock_auth.return_value.auth.sign_out.side_effect = Exception("Logout error")
         resp = client.post("/auth/logout", headers={"Authorization": "Bearer testtoken"})
         assert resp.status_code == 400

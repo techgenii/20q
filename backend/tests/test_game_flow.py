@@ -17,7 +17,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 
-import backend.game_logic as game_logic
+import game_logic as game_logic
 import openai
 
 
@@ -344,16 +344,6 @@ def test_generate_speech(monkeypatch):
         assert result == b"audio-bytes"
 
 
-def test_get_available_voices(monkeypatch):
-    monkeypatch.setattr(game_logic, "ELEVENLABS_API_KEY", "fake-key")
-    monkeypatch.setattr(game_logic, "ELEVENLABS_BASE_URL", "http://fake-url")
-    with patch("requests.get") as mock_get:
-        mock_get.return_value.status_code = 200
-        mock_get.return_value.json.return_value = {"voices": [{"voice_id": "v1"}]}
-        result = game_logic.get_available_voices()
-        assert result[0]["voice_id"] == "v1"
-
-
 def test_ask_question_with_tts(monkeypatch):
     monkeypatch.setattr(
         game_logic,
@@ -450,9 +440,9 @@ def test_start_game_with_game_type_max_players_guessed_word(monkeypatch):
 
 def test_start_game_with_defaults():
     """Test that start_game sets proper defaults when optional fields are None/0"""
-    with patch("backend.game_logic.get_supabase_client") as mock_supabase, \
-         patch("backend.game_logic.join_game") as mock_join_game, \
-         patch("backend.game_logic.SECRET_WORDS", [{"name": "test", "difficulty": 1}]):
+    with patch("game_logic.get_supabase_client") as mock_supabase, \
+         patch("game_logic.join_game") as mock_join_game, \
+         patch("game_logic.SECRET_WORDS", [{"name": "test", "difficulty": 1}]):
         
         # Mock the database response
         mock_supabase.return_value.table.return_value.insert.return_value.execute.return_value.data = [

@@ -19,7 +19,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 import base64
 
-import backend.elevenlabs_utils as elevenlabs_utils
+import elevenlabs_utils as elevenlabs_utils
 
 
 @pytest.fixture(autouse=True)
@@ -451,3 +451,13 @@ def test_dotenv_import_error():
     assert hasattr(elevenlabs_utils, "ELEVENLABS_API_KEY")
     assert hasattr(elevenlabs_utils, "ELEVENLABS_VOICE_ID")
     assert hasattr(elevenlabs_utils, "ELEVENLABS_BASE_URL")
+
+
+def test_get_available_voices(monkeypatch):
+    monkeypatch.setattr(elevenlabs_utils, "ELEVENLABS_API_KEY", "fake-key")
+    monkeypatch.setattr(elevenlabs_utils, "ELEVENLABS_BASE_URL", "http://fake-url")
+    with patch("requests.get") as mock_get:
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {"voices": [{"voice_id": "v1"}]}
+        result = elevenlabs_utils.get_available_voices()
+        assert result["voice_id"] == "v1"

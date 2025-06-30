@@ -32,7 +32,12 @@ except ImportError:
     pass
 
 # ElevenLabs API configuration
+# ElevenLabs configuration
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "9BWtsMINqrJLrRacOk9x")
+
+# ElevenLabs API configuration
+ELEVENLABS_BASE_URL = os.getenv("ELEVENLABS_BASE_URL")
 
 # Load secret words from supabase
 def load_secret_words():
