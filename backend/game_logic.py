@@ -381,15 +381,16 @@ def make_guess(game_id, player_id, guess, enable_tts=False, voice_id=None):
             temperature=0
         )
         result_text = response.choices[0].message.content.strip().rstrip('.')
-        result = {"correct": result_text == "correct", "message": result_text}
+        result = {"correct": result_text == "Correct", "message": result_text}
 
-        if result_text == "correct":
+        if result_text == "Correct":
             # Update game winner and status
             update_game_winner(game_id, player_id)
             success_message = (
                 f"Congratulations! You guessed correctly! The answer was {secret_word}."
             )
             result["message"] = success_message
+            result["secret_word"] = secret_word
 
             # Generate TTS for success
             if enable_tts:
@@ -397,8 +398,9 @@ def make_guess(game_id, player_id, guess, enable_tts=False, voice_id=None):
                 if audio_data:
                     result["audio"] = base64.b64encode(audio_data).decode("utf-8")
         else:
-            failure_message = f"Sorry, that's not correct. The answer was {secret_word}. Better luck next time!"
+            failure_message = f"Sorry, that's not correct."
             result["message"] = failure_message
+            result["secret_word"] = secret_word
 
             # Generate TTS for failure
             if enable_tts:
