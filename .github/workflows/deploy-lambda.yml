@@ -21,7 +21,7 @@ jobs:
       PYTHON_VERSION: 3.13
       HANDLER: whisper.handler
       RUNTIME: python3.13
-      ARCHITECTURE: arm64
+      ARCHITECTURE: x86_64
       STAGE_NAME: '$default'  # Use default stage for root URL
       FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
       ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
@@ -98,17 +98,6 @@ jobs:
           cd backend
           rm -rf $BUILD_DIR $ZIP_FILE
           mkdir -p $BUILD_DIR
-
-          # Install base packages first
-          pip install --upgrade pip
-          pip install wheel setuptools
-
-          # Install aiohttp and its dependencies first
-          pip install aiohttp==3.9.3 multidict yarl async-timeout attrs charset-normalizer frozenlist aiosignal --target $BUILD_DIR \
-            --platform manylinux_2014_x86_64 \
-            --only-binary=:all: \
-            --no-cache-dir \
-            --python-version 3.13
 
           # Then install other requirements
           pip install -r requirements.txt --target $BUILD_DIR \
