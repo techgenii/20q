@@ -99,10 +99,9 @@ jobs:
           rm -rf $BUILD_DIR $ZIP_FILE
           mkdir -p $BUILD_DIR
 
-          # Then install other requirements
+          # Install all requirements without --only-binary=:all:
           pip install -r requirements.txt --target $BUILD_DIR \
-            --platform manylinux_2014_x86_64 \
-            --only-binary=:all: \
+            --platform manylinux2014_x86_64 \
             --no-cache-dir \
             --upgrade \
             --python-version 3.13
