@@ -1,6 +1,5 @@
 # NOTE: This workflow expects all Lambda backend code (app.py, requirements.txt, etc.) to be in the 'backend' directory.
 # If you move your backend code, update the workflow paths accordingly.
-
 name: Deploy to Lambda
 
 on:
@@ -22,7 +21,7 @@ jobs:
       PYTHON_VERSION: 3.13
       HANDLER: app.handler
       RUNTIME: python3.13
-      ARCHITECTURE: x86_64
+      ARCHITECTURE: arm64
       STAGE_NAME: '$default'  # Use default stage for root URL
       FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
       ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
@@ -121,6 +120,12 @@ jobs:
           cd ..
           echo "size=$(du -h $ZIP_FILE | cut -f1)" >> $GITHUB_OUTPUT
 
+      - name: Upload Lambda package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lambda-package
+          path: backend/lambda-deploy.zip
+
       - name: Deploy Lambda Function
         run: |
           cd backend
@@ -160,8 +165,7 @@ jobs:
               --environment file://env.json \
               --timeout 30 \
               --memory-size 2048 \
-              --ephemeral-storage '{"Size": 2048}' \
-              --architectures arm64
+              --ephemeral-storage '{"Size": 2048}'
             
             # Wait for configuration update to complete
             aws lambda wait function-updated --function-name $FUNCTION_NAME
@@ -172,13 +176,13 @@ jobs:
               --runtime $RUNTIME \
               --role $ROLE_ARN \
               --handler $HANDLER \
-              --architectures arm64 \  # Changed to ARM64
+              --architectures $ARCHITECTURE \
               --zip-file fileb://$ZIP_FILE \
               --environment file://env.json \
               --timeout 30 \
-              --memory-size 2048 \  # Increased from 256
-              --ephemeral-storage '{"Size": 2048}'  # Added storage
-            
+              --memory-size 2048 \
+              --ephemeral-storage '{"Size": 2048}'
+
             # Wait for function to be active
             aws lambda wait function-active --function-name $FUNCTION_NAME
           fi
