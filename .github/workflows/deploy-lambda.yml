@@ -19,7 +19,7 @@ jobs:
       ZIP_FILE: lambda-deploy.zip
       BUILD_DIR: build
       PYTHON_VERSION: 3.13
-      HANDLER: app.handler
+      HANDLER: whisper.handler
       RUNTIME: python3.13
       ARCHITECTURE: arm64
       STAGE_NAME: '$default'  # Use default stage for root URL
@@ -105,8 +105,6 @@ jobs:
             --no-cache-dir \
             --upgrade \
             --python-version 3.13
-          
-          pip install --force-reinstall --no-deps openai -t $BUILD_DIR
 
           echo "Copying: app.py auth_routes.py game_logic.py game_routes.py models.py to $BUILD_DIR/"
           cp app.py auth_routes.py game_logic.py game_routes.py models.py $BUILD_DIR/

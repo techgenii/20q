@@ -30,22 +30,22 @@ logger = logging.getLogger(__name__)
 
 logger.info("Lambda cold start: app.py successfully loaded")
 
-app = FastAPI(title="Whisper Chase: 20 Questions")
+whisper = FastAPI(title="Whisper Chase: 20 Questions")
 
 # Add CORS middleware
-app.add_middleware(
+whisper.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Configure this properly for production
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(auth_router)
-app.include_router(game_router)
-app.include_router(voice_router)
+whisper.include_router(auth_router)
+whisper.include_router(game_router)
+whisper.include_router(voice_router)
 
 # Root Check
-@app.get("/")
+@whisper.get("/")
 async def root():
     logger.info("Root endpoint called")
     return {
@@ -55,7 +55,7 @@ async def root():
     }
 
 # Health checks
-@app.get("/health")
+@whisper.get("/health")
 def health_check():
     logger.info("Health endpoint called")
     return {"status": "healthy"}
@@ -66,7 +66,7 @@ def handler(event, context):
     
     try:
         # Use Mangum to handle the FastAPI app
-        mangum_handler = Mangum(app)
+        mangum_handler = Mangum(whisper)
         response = mangum_handler(event, context)
         logger.info(f"Lambda response: {response}")
         print(f"Lambda response: {response}")
