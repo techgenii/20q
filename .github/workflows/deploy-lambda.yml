@@ -99,12 +99,10 @@ jobs:
           rm -rf $BUILD_DIR $ZIP_FILE
           mkdir -p $BUILD_DIR
 
-          # Install all requirements without --only-binary=:all:
+          # Install all requirements natively (no --platform or --python-version)
           pip install -r requirements.txt --target $BUILD_DIR \
-            --platform manylinux2014_x86_64 \
             --no-cache-dir \
-            --upgrade \
-            --python-version 3.13
+            --upgrade
 
           echo "Copying: whisper.py auth_routes.py game_logic.py game_routes.py models.py to $BUILD_DIR/"
           cp whisper.py auth_routes.py game_logic.py game_routes.py models.py $BUILD_DIR/
