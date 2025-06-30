@@ -166,23 +166,24 @@ def start_game(
         }
         
         # Set defaults for optional fields
-        if game_type is None or game_type == "":
+        if game_type is None or game_type.strip() == "":
             data["game_type"] = "solo"
         else:
-            data["game_type"] = game_type
+            data["game_type"] = game_type.strip()
             
         if max_players is None or max_players <= 0:
             data["max_players"] = 1
         else:
             data["max_players"] = max_players
             
-        if guessed_word is not None:
-            data["guessed_word"] = guessed_word
+        if guessed_word is not None or guessed_word.strip() == "":
+            data["guessed_word"] = guessed_word.strip()
             
         response = get_supabase_client().table("games").insert(data).execute()
         if not response.data:
             raise Exception("Failed to start game with the given host player ID.")
         game_data = response.data[0]
+        
         # Add host player as participant in the game
         join_game(game_data["id"], host_player_id)
         # Generate welcome message with TTS if enabled
