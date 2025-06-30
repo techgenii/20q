@@ -3,7 +3,7 @@ mangum
 pydantic
 pydantic[email]
 supabase
-openai
+openai>=1.0
 requests
 python-multipart
 python-dotenv

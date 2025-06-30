@@ -14,14 +14,12 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-import json
 import os
 import random
-from io import BytesIO
 import base64
-
 import requests
-import openai
+
+from openai import OpenAI
 
 from supabase_client import get_supabase_client
 
@@ -32,9 +30,6 @@ try:
     load_dotenv()
 except ImportError:
     pass
-
-# Load API keys from env
-openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # ElevenLabs API configuration
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
@@ -218,15 +213,20 @@ def join_game(game_id, player_id):
 def ask_openai_question(secret_word, question, enable_tts=False, voice_id=None):
     """Send player question + secret word to OpenAI, get Yes/No/Maybe answer with optional TTS."""
     try:
+        client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+
         instruction_prompt = f"""You are playing 20 Questions. The secret word is "{secret_word}"""
         prompt = f"""The player asked: "{question}" Answer with only one word: Yes, No, or Maybe."""
-        response = openai.responses.create(
+
+        response = client.chat.completions.create(
             model="gpt-4o-mini",
-            instructions=instruction_prompt,
-            input=prompt,
+            messages=[
+                {"role": "system", "content": instruction_prompt},
+                {"role": "user", "content": prompt}
+            ],
             temperature=0
         )
-        answer = response.output_text.strip().rstrip('.')
+        answer = response.choices[0].message.content.strip().rstrip('.')
         result = {"answer": answer}
 
         # Generate TTS if enabled
@@ -430,22 +430,20 @@ def make_guess(game_id, player_id, guess, enable_tts=False, voice_id=None):
     Returns True if correct, False otherwise.
     """
     try:
-        game = get_game(game_id)
-        secret_word = game["secret_word"]
+        client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
         game = get_game(game_id)
         secret_word = game["secret_word"]
 
         instruction_prompt = f"""You are playing 20 Questions. The secret word is "{secret_word}"."""
         prompt = f"""The player guessed: "{guess}"\nReply with exactly one word: Correct or Incorrect."""
-        
-        response = openai.responses.create(
+
+        aResponse = client.responses.create(
             model="gpt-4o-mini",
             instructions=instruction_prompt,
             input=prompt,
-            temperature=0
         )
-        result_text = response.output_text.strip().rstrip('.').lower()
+        result_text = aResponse.output_text.strip().rstrip('.')
         result = {"correct": result_text == "correct", "message": result_text}
 
         if result_text == "correct":

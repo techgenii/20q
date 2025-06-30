@@ -38,10 +38,6 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Force reinstall openai
-        run: |
-          pip install --force-reinstall openai
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
