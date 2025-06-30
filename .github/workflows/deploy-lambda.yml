@@ -100,7 +100,7 @@ jobs:
           mkdir -p $BUILD_DIR
 
           # Install aiohttp separately first with no dependencies
-          pip3 install aiohttp>=3.9.1 --target $BUILD_DIR \
+          pip install aiohttp>=3.9.1 --target $BUILD_DIR \
             --platform manylinux_2014_x86_64 \
             --only-binary=:all: \
             --no-cache-dir \
@@ -108,7 +108,7 @@ jobs:
             --python-version 3.13
 
           # Then install other requirements
-          pip3 install -r requirements.txt -t $BUILD_DIR \
+          pip install -r requirements.txt -t $BUILD_DIR \
             --platform manylinux_2014_x86_64 \
             --only-binary=:all: \
             --no-cache-dir \

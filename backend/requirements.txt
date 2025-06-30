@@ -8,4 +8,4 @@ requests
 python-multipart
 python-dotenv
 email-validator
-aiohttp>=3.12.13
+aiohttp
