@@ -22,22 +22,17 @@ import requests
 from openai import OpenAI
 
 from supabase_client import get_supabase_client
+from elevenlabs_utils import generate_speech
 
 # Optional: use dotenv only locally
 try:
     from dotenv import load_dotenv
-
     load_dotenv()
 except ImportError:
     pass
 
 # ElevenLabs API configuration
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-ELEVENLABS_VOICE_ID = os.getenv(
-    "ELEVENLABS_VOICE_ID", "9BWtsMINqrJLrRacOk9x"
-)  # Default voice ID
-ELEVENLABS_BASE_URL = os.getenv("ELEVENLABS_BASE_URL")
-
+ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "9BWtsMINqrJLrRacOk9x")
 
 # Load secret words from supabase
 def load_secret_words():
@@ -48,72 +43,6 @@ def load_secret_words():
 
 
 SECRET_WORDS = load_secret_words()
-
-
-def generate_speech(text, voice_id=None, model_id="eleven_monolingual_v1"):
-    """
-    Generate speech using ElevenLabs API
-
-    Args:
-        text (str): Text to convert to speech
-        voice_id (str): ElevenLabs voice ID (optional, uses default if not provided)
-        model_id (str): ElevenLabs model ID
-
-    Returns:
-        bytes: Audio data as bytes, or None if failed
-    """
-    if not ELEVENLABS_API_KEY:
-        print("ElevenLabs API key not found. Speech generation disabled.")
-        return None
-
-    if not voice_id:
-        voice_id = ELEVENLABS_VOICE_ID
-
-    url = f"{ELEVENLABS_BASE_URL}/text-to-speech/{voice_id}"
-
-    headers = {
-        "Accept": "audio/mpeg",
-        "Content-Type": "application/json",
-        "xi-api-key": ELEVENLABS_API_KEY,
-    }
-
-    data = {
-        "text": text,
-        "model_id": model_id,
-        "voice_settings": {"stability": 0.5, "similarity_boost": 0.5},
-    }
-
-    try:
-        response = requests.post(url, json=data, headers=headers)
-        if response.status_code == 200:
-            return response.content
-        else:
-            print(f"ElevenLabs API error: {response.status_code} - {response.text}")
-            return None
-    except Exception as e:
-        print(f"Error generating speech: {e}")
-        return None
-
-
-def get_available_voices():
-    """Get list of available voices from ElevenLabs"""
-    if not ELEVENLABS_API_KEY:
-        return []
-
-    url = f"{ELEVENLABS_BASE_URL}/voices"
-    headers = {"xi-api-key": ELEVENLABS_API_KEY}
-
-    try:
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            return response.json().get("voices", [])
-        else:
-            print(f"Error fetching voices: {response.status_code}")
-            return []
-    except Exception as e:
-        print(f"Error fetching voices: {e}")
-        return []
-
 
 def choose_secret_word(difficulty=None):
     """Choose a random secret word, optionally filtering by difficulty"""
