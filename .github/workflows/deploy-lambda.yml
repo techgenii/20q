@@ -338,7 +338,7 @@ jobs:
           if [ $? -eq 0 ]; then
             echo "✅ Health endpoint response: $HEALTH_RESPONSE"
             # Check if response contains expected status
-            if echo "$HEALTH_RESPONSE" | grep -q "healthy'; then
+            if echo "$HEALTH_RESPONSE" | grep -q "healthy"; then
               echo "✅ Health endpoint working correctly!"
             else
               echo "⚠️  Health endpoint returned unexpected response"
