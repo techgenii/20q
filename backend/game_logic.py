@@ -169,15 +169,15 @@ def start_game(
         if game_type is None or game_type.strip() == "":
             data["game_type"] = "solo"
         else:
-            data["game_type"] = game_type.strip()
+            data["game_type"] = game_type
             
         if max_players is None or max_players <= 0:
             data["max_players"] = 1
         else:
             data["max_players"] = max_players
             
-        if guessed_word is not None or guessed_word.strip() == "":
-            data["guessed_word"] = guessed_word.strip()
+        if guessed_word is not None and guessed_word.strip() != "":
+            data["guessed_word"] = guessed_word
             
         response = get_supabase_client().table("games").insert(data).execute()
         if not response.data:
