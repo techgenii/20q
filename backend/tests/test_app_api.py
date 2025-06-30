@@ -15,10 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import backend.auth_routes as auth_routes
+import auth_routes as auth_routes
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
-from backend.app import app
+from app import app
+from security import security
 import pytest
 
 # Create TestClient with base_url to handle root_path
@@ -27,24 +28,84 @@ client = TestClient(app, base_url="http://testserver")
 
 @pytest.fixture(autouse=True, scope="module")
 def override_auth_dependencies():
+    print("🔧 Setting up auth dependency overrides...")
     fake_user = MagicMock()
-    fake_user.id = "test-user-id"
+    fake_user.id = "123e4567-e89b-12d3-a456-426614174000"  # valid UUID
     fake_user.email = "test@example.com"
     fake_user.user_metadata = {"full_name": "Test User"}
     fake_user.created_at.isoformat.return_value = "2025-01-01T00:00:00"
 
     app.dependency_overrides.clear()
-    app.dependency_overrides[auth_routes.get_current_user] = lambda: fake_user
-    app.dependency_overrides[auth_routes.get_current_user_optional] = lambda: fake_user
-    yield
+
+    mock_credentials = MagicMock()
+    mock_credentials.credentials = "testtoken"
+
+    def mock_security():
+        print("🔧 Mock security called")
+        return mock_credentials
+
+    async def mock_get_current_user(credentials=None):
+        print("🔧 Mock get_current_user called")
+        return fake_user
+
+    async def mock_get_current_user_optional(credentials=None):
+        print("🔧 Mock get_current_user_optional called")
+        return fake_user
+
+    app.dependency_overrides[security] = mock_security
+    app.dependency_overrides[auth_routes.get_current_user] = mock_get_current_user
+    app.dependency_overrides[auth_routes.get_current_user_optional] = mock_get_current_user_optional
+
+    print(f"🔧 Dependency overrides set: {list(app.dependency_overrides.keys())}")
+
+    # Patch Supabase client to always return a player with the test UUID
+    with patch("backend.supabase_client.get_supabase_client") as mock_supabase:
+        mock_supabase.return_value.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value.data = {
+            "id": "123e4567-e89b-12d3-a456-426614174000",
+            "email": "test@example.com",
+            "username": "Test User",
+            "avatar_url": None,
+            "last_login_at": "2025-01-01T00:00:00",
+            "bio": None,
+            "favorite_category": None,
+            "achievements": [],
+        }
+        client = TestClient(app)
+        yield client
+    print("🔧 Cleaning up auth dependency overrides...")
     app.dependency_overrides.clear()
 
 
 def test_start_game_success():
-    with patch("backend.game_routes.start_game") as mock_start_game:
+    with patch("backend.supabase_client.get_supabase_client") as mock_supabase, \
+         patch("supabase_client.get_supabase_client") as mock_supabase_rel, \
+         patch("backend.game_routes.start_game") as mock_start_game:
+        # Patch select and insert for player lookup and creation
+        for mock in (mock_supabase, mock_supabase_rel):
+            # Patch select to return the test player
+            mock.return_value.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value.data = {
+                "id": "123e4567-e89b-12d3-a456-426614174000",
+                "email": "test@example.com",
+                "username": "Test User",
+                "avatar_url": None,
+                "last_login_at": "2025-01-01T00:00:00",
+                "bio": None,
+                "favorite_category": None,
+                "achievements": [],
+            }
+            # Patch insert to simulate successful insert
+            mock.return_value.table.return_value.insert.return_value.execute.return_value.data = [{"id": "123e4567-e89b-12d3-a456-426614174000"}]
+
         mock_start_game.return_value = {"id": "game-uuid", "secret_word": "test"}
         resp = client.post(
-            "/start_game", json={"difficulty": 1}
+            "/start_game",
+            json={
+                "difficulty": 1,
+                "max_players": 1,
+                "game_type": "solo",
+                "guessed_word": None
+            },
+            headers={"Authorization": "Bearer testtoken"}
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -54,7 +115,7 @@ def test_start_game_success():
 
 def test_start_game_failure():
     with patch("backend.game_routes.start_game", side_effect=Exception("fail")):
-        resp = client.post("/start_game", json={"difficulty": 1})
+        resp = client.post("/start_game", json={"difficulty": 1}, headers={"Authorization": "Bearer testtoken"})
         assert resp.status_code == 500
         assert "fail" in resp.json().get("detail", "")
 
@@ -69,7 +130,7 @@ def test_join_game_success():
         }
         mock_get_remaining_slots.return_value = 2
         resp = client.post(
-            "/join_game", json={"game_id": "game-uuid"}
+            "/join_game", json={"game_id": "game-uuid"}, headers={"Authorization": "Bearer testtoken"}
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -87,7 +148,7 @@ def test_join_game_no_max_players():
         }
         mock_get_remaining_slots.return_value = 1
         resp = client.post(
-            "/join_game", json={"game_id": "game-uuid"}
+            "/join_game", json={"game_id": "game-uuid"}, headers={"Authorization": "Bearer testtoken"}
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -97,7 +158,7 @@ def test_join_game_no_max_players():
 def test_join_game_failure():
     with patch("backend.game_routes.join_game", side_effect=Exception("fail")):
         resp = client.post(
-            "/join_game", json={"game_id": "game-uuid"}
+            "/join_game", json={"game_id": "game-uuid"}, headers={"Authorization": "Bearer testtoken"}
         )
         assert resp.status_code == 500
         assert "fail" in resp.json().get("detail", "")
@@ -118,6 +179,7 @@ def test_ask_question_active():
                 "game_id": "game-uuid",
                 "question": "Is it big?",
             },
+            headers={"Authorization": "Bearer testtoken"}
         )
         assert resp.status_code == 200
         assert resp.json()["answer"] == "Yes"
@@ -132,6 +194,7 @@ def test_ask_question_inactive():
                 "game_id": "game-uuid",
                 "question": "Is it big?",
             },
+            headers={"Authorization": "Bearer testtoken"}
         )
         assert resp.status_code == 200
         assert resp.json()["error"] == "Game is not active"
@@ -145,6 +208,7 @@ def test_ask_question_failure():
                 "game_id": "game-uuid",
                 "question": "Is it big?",
             },
+            headers={"Authorization": "Bearer testtoken"}
         )
         assert resp.status_code == 500
         assert "fail" in resp.json().get("detail", "")
@@ -162,6 +226,7 @@ def test_make_guess_active():
                 "game_id": "game-uuid",
                 "guess": "elephant",
             },
+            headers={"Authorization": "Bearer testtoken"}
         )
         assert resp.status_code == 200
         assert resp.json()["correct"] is True
@@ -176,6 +241,7 @@ def test_make_guess_inactive():
                 "game_id": "game-uuid",
                 "guess": "elephant",
             },
+            headers={"Authorization": "Bearer testtoken"}
         )
         assert resp.status_code == 200
         assert resp.json()["error"] == "Game is not active"
@@ -189,6 +255,7 @@ def test_make_guess_failure():
                 "game_id": "game-uuid",
                 "guess": "elephant",
             },
+            headers={"Authorization": "Bearer testtoken"}
         )
         assert resp.status_code == 500
         assert "fail" in resp.json().get("detail", "")
@@ -224,6 +291,7 @@ def test_auth_signup_success():
                 "password": "password123",
                 "full_name": "Test User",
             },
+            headers={"Authorization": "Bearer testtoken"}
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -243,6 +311,7 @@ def test_auth_signup_failure():
         resp = client.post(
             "/auth/signup",
             json={"email": "test@example.com", "password": "password123"},
+            headers={"Authorization": "Bearer testtoken"}
         )
         assert resp.status_code == 400
         assert "User registration failed" in resp.json()["detail"]
@@ -272,6 +341,7 @@ def test_auth_login_success():
         resp = client.post(
             "/auth/login",
             json={"email": "test@example.com", "password": "password123"},
+            headers={"Authorization": "Bearer testtoken"}
         )
         print("LOGIN RESPONSE:", resp.status_code, resp.json())
         assert resp.status_code == 200
@@ -292,6 +362,7 @@ def test_auth_login_failure():
         resp = client.post(
             "/auth/login",
             json={"email": "test@example.com", "password": "wrongpassword"},
+            headers={"Authorization": "Bearer testtoken"}
         )
         assert resp.status_code == 401
         assert "Invalid email or password" in resp.json()["detail"]
@@ -299,7 +370,7 @@ def test_auth_login_failure():
 
 def test_auth_logout_success():
     with patch("backend.auth_routes.get_supabase_auth_client") as mock_auth:
-        resp = client.post("/auth/logout")
+        resp = client.post("/auth/logout", headers={"Authorization": "Bearer testtoken"})
         assert resp.status_code == 200
         assert resp.json()["message"] == "Successfully logged out"
 
@@ -313,7 +384,7 @@ def test_auth_me_success():
             "favorite_category": None,
             "achievements": [],
         }
-        resp = client.get("/auth/me")
+        resp = client.get("/auth/me", headers={"Authorization": "Bearer testtoken"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["id"] == "test-user-id"
@@ -321,7 +392,7 @@ def test_auth_me_success():
 
 def test_auth_reset_password_success():
     with patch("backend.auth_routes.get_supabase_auth_client") as mock_auth:
-        resp = client.post("/auth/reset-password", params={"email": "test@example.com"})
+        resp = client.post("/auth/reset-password", params={"email": "test@example.com"}, headers={"Authorization": "Bearer testtoken"})
         assert resp.status_code == 200
         assert resp.json()["message"] == "Password reset email sent"
 
@@ -346,6 +417,7 @@ def test_voice_text_to_speech_success():
                         "use_speaker_boost": True,
                     },
                 },
+                headers={"Authorization": "Bearer testtoken"}
             )
             assert resp.status_code == 200
             assert resp.headers["content-type"] == "audio/mpeg"
@@ -355,7 +427,7 @@ def test_voice_text_to_speech_no_api_key():
     with patch("os.getenv") as mock_getenv:
         mock_getenv.return_value = None
         with patch("backend.voice_routes.get_current_user", return_value=MagicMock()):
-            resp = client.post("/voice/text-to-speech", json={"text": "Hello world"})
+            resp = client.post("/voice/text-to-speech", json={"text": "Hello world"}, headers={"Authorization": "Bearer testtoken"})
             assert resp.status_code == 500
             assert "ElevenLabs API key not configured" in resp.json()["detail"]
 
@@ -377,7 +449,7 @@ def test_voice_get_voices_success():
         }
         mock_get.return_value = mock_response
         with patch("backend.voice_routes.get_current_user", return_value=MagicMock()):
-            resp = client.get("/voice/voices")
+            resp = client.get("/voice/voices", headers={"Authorization": "Bearer testtoken"})
             assert resp.status_code == 200
             data = resp.json()
             assert len(data["voices"]) == 1
@@ -397,6 +469,7 @@ def test_voice_speech_to_text_success():
             resp = client.post(
                 "/voice/speech-to-text",
                 files={"audio_file": ("test.mp3", audio_file, "audio/mpeg")},
+                headers={"Authorization": "Bearer testtoken"}
             )
             assert resp.status_code == 200
             assert resp.json()["transcription"] == "Hello world"
@@ -422,6 +495,7 @@ def test_ask_question_voice_success():
         resp = client.post(
             "/ask_question_voice",
             json={"req": {"game_id": "game-uuid", "question": "Is it big?"}},
+            headers={"Authorization": "Bearer testtoken"}
         )
         print("ASK_QUESTION_VOICE RESPONSE:", resp.status_code, resp.json())
         assert resp.status_code == 200
@@ -445,6 +519,7 @@ def test_ask_question_voice_no_audio():
         resp = client.post(
             "/ask_question_voice",
             json={"req": {"game_id": "game-uuid", "question": "Is it big?"}},
+            headers={"Authorization": "Bearer testtoken"}
         )
         print("ASK_QUESTION_VOICE_NO_AUDIO RESPONSE:", resp.status_code, resp.json())
         assert resp.status_code == 200
@@ -461,6 +536,7 @@ def test_ask_question_voice_game_not_active():
         resp = client.post(
             "/ask_question_voice",
             json={"req": {"game_id": "game-uuid", "question": "Is it big?"}},
+            headers={"Authorization": "Bearer testtoken"}
         )
         print("ASK_QUESTION_VOICE_GAME_NOT_ACTIVE RESPONSE:", resp.status_code, resp.json())
         assert resp.status_code == 200
@@ -476,6 +552,7 @@ def test_update_game_voice_settings():
             "similarity_boost": 0.8,
             "use_speaker_boost": False,
         },
+        headers={"Authorization": "Bearer testtoken"}
     )
 
     assert resp.status_code == 200
@@ -493,7 +570,7 @@ def test_get_game_with_auth():
             "status": "playing",
             "secret_word": "elephant",
         }
-        resp = client.get("/game/game-uuid")
+        resp = client.get("/game/game-uuid", headers={"Authorization": "Bearer testtoken"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["id"] == "game-uuid"
@@ -512,7 +589,7 @@ def test_get_game_without_auth():
                 "status": "playing",
                 "secret_word": "elephant",
             }
-            resp = client.get("/game/game-uuid")
+            resp = client.get("/game/game-uuid", headers={"Authorization": "Bearer testtoken"})
             assert resp.status_code == 200
             data = resp.json()
             assert data["id"] == "game-uuid"
@@ -527,7 +604,7 @@ def test_get_game_without_auth():
 
 # Health Check Test
 def test_root_health_check():
-    resp = client.get("/")
+    resp = client.get("/", headers={"Authorization": "Bearer testtoken"})
     assert resp.status_code == 200
     assert resp.json()["message"] == "Hello from WhisperChase Game API with Auth on Lambda!"
 
@@ -541,7 +618,7 @@ def test_voice_text_to_speech_api_error():
         mock_response.text = "Bad Request"
         mock_post.return_value = mock_response
 
-        resp = client.post("/voice/text-to-speech", json={"text": "Hello world"})
+        resp = client.post("/voice/text-to-speech", json={"text": "Hello world"}, headers={"Authorization": "Bearer testtoken"})
 
         assert resp.status_code == 500
         assert "ElevenLabs API error" in resp.json()["detail"]
@@ -555,7 +632,7 @@ def test_voice_get_voices_api_error():
         mock_response.text = "Unauthorized"
         mock_get.return_value = mock_response
 
-        resp = client.get("/voice/voices")
+        resp = client.get("/voice/voices", headers={"Authorization": "Bearer testtoken"})
 
         assert resp.status_code == 500
         assert "ElevenLabs API error" in resp.json()["detail"]
@@ -572,6 +649,7 @@ def test_speech_to_text_no_api_key():
         resp = client.post(
             "/voice/speech-to-text",
             files={"audio_file": ("test.mp3", audio_file, "audio/mpeg")},
+            headers={"Authorization": "Bearer testtoken"}
         )
 
         assert resp.status_code == 500
@@ -586,6 +664,7 @@ def test_auth_signup_exception():
         resp = client.post(
             "/auth/signup",
             json={"email": "test@example.com", "password": "password123"},
+            headers={"Authorization": "Bearer testtoken"}
         )
 
         assert resp.status_code == 400
@@ -595,6 +674,6 @@ def test_auth_signup_exception():
 def test_auth_logout_exception():
     with patch("backend.auth_routes.get_supabase_auth_client") as mock_auth:
         mock_auth.return_value.auth.sign_out.side_effect = Exception("Logout error")
-        resp = client.post("/auth/logout")
+        resp = client.post("/auth/logout", headers={"Authorization": "Bearer testtoken"})
         assert resp.status_code == 400
         assert "Logout failed" in resp.json()["detail"]

@@ -16,5 +16,4 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # backend/security.py
 from fastapi.security import HTTPBearer
-
 security = HTTPBearer()

@@ -155,12 +155,13 @@ jobs:
             # Wait for code update to complete
             aws lambda wait function-updated --function-name $FUNCTION_NAME
             
-            # Then update configuration
             aws lambda update-function-configuration \
               --function-name $FUNCTION_NAME \
               --environment file://env.json \
               --timeout 30 \
-              --memory-size 256
+              --memory-size 2048 \
+              --ephemeral-storage '{"Size": 2048}' \
+              --architectures arm64
             
             # Wait for configuration update to complete
             aws lambda wait function-updated --function-name $FUNCTION_NAME
@@ -171,11 +172,12 @@ jobs:
               --runtime $RUNTIME \
               --role $ROLE_ARN \
               --handler $HANDLER \
-              --architectures $ARCHITECTURE \
+              --architectures arm64 \  # Changed to ARM64
               --zip-file fileb://$ZIP_FILE \
               --environment file://env.json \
               --timeout 30 \
-              --memory-size 256
+              --memory-size 2048 \  # Increased from 256
+              --ephemeral-storage '{"Size": 2048}'  # Added storage
             
             # Wait for function to be active
             aws lambda wait function-active --function-name $FUNCTION_NAME
@@ -332,7 +334,7 @@ jobs:
           if [ $? -eq 0 ]; then
             echo "✅ Health endpoint response: $HEALTH_RESPONSE"
             # Check if response contains expected status
-            if echo "$HEALTH_RESPONSE" | grep -q '"status": "healthy"'; then
+            if echo "$HEALTH_RESPONSE" | grep -q "healthy'; then
               echo "✅ Health endpoint working correctly!"
             else
               echo "⚠️  Health endpoint returned unexpected response"

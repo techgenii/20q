@@ -130,6 +130,23 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </div>
           </Card>
 
+          {/* About Me Card - Conditionally Rendered */}
+          {user.bio && user.bio.trim() !== '' && (
+            <Card variant="elevated" className="overflow-hidden">
+              <div className="p-8">
+                <h3 className="font-display text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                  <User className="w-7 h-7 mr-3 text-purple-primary" />
+                  About Me
+                </h3>
+                <div className="prose prose-gray max-w-none">
+                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap text-lg">
+                    {user.bio}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          )}
+
           {/* Achievements Card - Now Separate */}
           <Card variant="elevated" className="overflow-hidden">
             <div className="p-8">

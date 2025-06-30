@@ -21,9 +21,9 @@ from pydantic import EmailStr
 from datetime import datetime, timezone
 
 # Import your models, Supabase utils, etc.
-from .models import UserSignUp, UserLogin, ProfileUpdateRequest, UserResponse, TokenResponse
-from .supabase_client import get_supabase_client, get_supabase_auth_client
-from .security import security
+from models import UserSignUp, UserLogin, ProfileUpdateRequest, UserResponse, TokenResponse
+from supabase_client import get_supabase_client, get_supabase_auth_client
+from backend.security import security
 
 router = APIRouter()
 

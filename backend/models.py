@@ -75,9 +75,9 @@ class VoiceResponse(BaseModel):
 
 # Game Models (existing)
 class StartGameRequest(BaseModel):
-    difficulty: int = None
+    difficulty: int
     game_type: Optional[str] = None
-    max_players: Optional[int] = None
+    max_players: int
     guessed_word: Optional[str] = None
 
 

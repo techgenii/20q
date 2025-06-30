@@ -446,3 +446,37 @@ def test_start_game_with_game_type_max_players_guessed_word(monkeypatch):
     assert result["game_type"] == "solo"
     assert result["max_players"] == 2
     assert result["guessed_word"] == "cat"
+
+
+def test_start_game_with_defaults():
+    """Test that start_game sets proper defaults when optional fields are None/0"""
+    with patch("backend.game_logic.get_supabase_client") as mock_supabase, \
+         patch("backend.game_logic.join_game") as mock_join_game, \
+         patch("backend.game_logic.SECRET_WORDS", [{"name": "test", "difficulty": 1}]):
+        
+        # Mock the database response
+        mock_supabase.return_value.table.return_value.insert.return_value.execute.return_value.data = [
+            {
+                "id": "test-game-id",
+                "game_type": "solo",
+                "max_players": 1,
+                "guessed_word": None
+            }
+        ]
+        
+        # Call start_game with None/0 values
+        result = game_logic.start_game(
+            host_player_id="test-user-id",
+            difficulty=1,
+            game_type=None,
+            max_players=0,
+            guessed_word=None
+        )
+        
+        # Verify the function was called with defaults
+        mock_supabase.return_value.table.return_value.insert.assert_called_once()
+        call_args = mock_supabase.return_value.table.return_value.insert.call_args[0][0]
+        
+        assert call_args["game_type"] == "solo"
+        assert call_args["max_players"] == 1
+        assert "guessed_word" not in call_args  # Should not be included when None

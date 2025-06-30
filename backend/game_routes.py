@@ -46,6 +46,7 @@ def api_start_game(req: StartGameRequest, current_user=Depends(get_current_user)
             "game_type": game.get("game_type"),
             "max_players": game.get("max_players"),
             "guessed_word": game.get("guessed_word"),
+            "difficulty": game.get("difficulty"),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

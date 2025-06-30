@@ -39,7 +39,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 # ElevenLabs API configuration
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 ELEVENLABS_VOICE_ID = os.getenv(
-    "ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM"
+    "ELEVENLABS_VOICE_ID", "9BWtsMINqrJLrRacOk9x"
 )  # Default voice ID
 ELEVENLABS_BASE_URL = os.getenv("ELEVENLABS_BASE_URL")
 
@@ -133,7 +133,7 @@ def choose_secret_word(difficulty=None):
 
 def start_game(
     host_player_id,
-    difficulty=None,
+    difficulty,
     enable_tts=False,
     voice_id=None,
     game_type=None,
@@ -164,12 +164,21 @@ def start_game(
             "enable_tts": enable_tts,
             "voice_id": voice_id or ELEVENLABS_VOICE_ID,
         }
-        if game_type is not None:
+        
+        # Set defaults for optional fields
+        if game_type is None or game_type == "":
+            data["game_type"] = "solo"
+        else:
             data["game_type"] = game_type
-        if max_players is not None:
+            
+        if max_players is None or max_players <= 0:
+            data["max_players"] = 1
+        else:
             data["max_players"] = max_players
+            
         if guessed_word is not None:
             data["guessed_word"] = guessed_word
+            
         response = get_supabase_client().table("games").insert(data).execute()
         if not response.data:
             raise Exception("Failed to start game with the given host player ID.")
