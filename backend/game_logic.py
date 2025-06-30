@@ -372,12 +372,15 @@ def make_guess(game_id, player_id, guess, enable_tts=False, voice_id=None):
         instruction_prompt = f"""You are playing 20 Questions. The secret word is "{secret_word}"."""
         prompt = f"""The player guessed: "{guess}"\nReply with exactly one word: Correct or Incorrect."""
 
-        aResponse = client.responses.create(
+        response = client.chat.completions.create(
             model="gpt-4o-mini",
-            instructions=instruction_prompt,
-            input=prompt,
+            messages=[
+                {"role": "system", "content": instruction_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0
         )
-        result_text = aResponse.output_text.strip().rstrip('.')
+        result_text = response.choices[0].message.content.strip().rstrip('.')
         result = {"correct": result_text == "correct", "message": result_text}
 
         if result_text == "correct":
